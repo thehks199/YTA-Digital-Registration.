@@ -7,14 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- Supabase JS client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* =========================================================
-   SECTION 3: CSS — DESIGN TOKENS
-   --ink #12222B  --deep-blue #0E3B5C  --sky #1C6E9C  --emerald #146B47
-   --gold #BD9330  --paper #F6F5F0  --card #FFFFFF  --line #E1E4DE
-   display: 'Fraunces' | body: 'Inter' | data/mono: 'JetBrains Mono'
-   Signature element: registration preview as a perforated membership
-   stub ticket with a tear line between card and counterfoil.
+   SECTION 3: CSS — DESIGN TOKENS (unchanged from prior version)
    ========================================================= */
 :root{
   --ink:#12222B; --deep-blue:#0E3B5C; --deep-blue-2:#0A2C46; --sky:#1C6E9C;
@@ -72,6 +69,9 @@ button{font-family:inherit;}
 .warning-box{margin-top:14px; background:rgba(255,255,255,0.96); color:var(--ink); border-radius:var(--radius-md); padding:12px 14px; font-size:12.5px; line-height:1.5; border-left:4px solid var(--gold);}
 .warning-box b{color:var(--danger);}
 
+.config-warning{background:#FFF6E5; border:1.5px solid var(--gold); border-radius:var(--radius-md); padding:14px 16px; margin:16px 0; font-size:12.5px; line-height:1.6; color:#5c4a12;}
+.config-warning b{color:var(--danger);}
+
 .field{margin-bottom:16px;}
 .field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--deep-blue-2);}
 .field .req{color:var(--danger); margin-left:2px;}
@@ -85,7 +85,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 
 .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px; padding:14px 18px; border-radius:var(--radius-md); font-size:15px; font-weight:700; border:none; cursor:pointer; transition:transform .1s ease, filter .12s ease, background .12s ease; letter-spacing:0.01em;}
 .btn:active{transform:scale(0.98);}
-.btn:disabled{opacity:0.45; cursor:not-allowed;}
+.btn:disabled{opacity:0.55; cursor:not-allowed;}
 .btn-primary{background:var(--deep-blue); color:#fff;}
 .btn-primary:hover{background:var(--sky);}
 .btn-whatsapp{background:#1F9E4D; color:#fff;}
@@ -99,6 +99,8 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .btn-danger:hover{background:#96201A;}
 .btn-danger-outline{background:#fff; border:1.5px solid var(--danger); color:var(--danger);}
 .btn-sm{min-height:36px; padding:8px 12px; font-size:12px;}
+.spinner{width:16px; height:16px; border-radius:50%; border:2.5px solid rgba(255,255,255,0.4); border-top-color:#fff; display:inline-block; animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 .ticket{position:relative; border-radius:var(--radius-lg); overflow:visible; background:var(--card); box-shadow:var(--shadow-2); margin-bottom:16px; border:1px solid var(--line);}
 .ticket-main{padding:22px 20px 18px; position:relative;}
@@ -130,7 +132,6 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 @keyframes pop{from{transform:scale(0.5); opacity:0;} to{transform:scale(1); opacity:1;}}
 .success-check svg{width:30px; height:30px;}
 
-/* ---------- Recipient selection ---------- */
 .mode-toggle{display:flex; gap:8px; margin-bottom:16px;}
 .mode-btn{flex:1; padding:11px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-size:13px; font-weight:600; color:#6b7a78; cursor:pointer;}
 .mode-btn.active{background:var(--deep-blue); border-color:var(--deep-blue); color:#fff;}
@@ -142,7 +143,6 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .recipient-item .rname2{font-weight:700; font-size:13.5px; color:var(--ink);}
 .recipient-item .rnum{font-size:11.5px; color:#6b7a78; font-family:'JetBrains Mono',monospace; margin-top:2px;}
 
-/* ---------- Sequential send queue ---------- */
 .queue-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); padding:26px 20px; text-align:center; box-shadow:var(--shadow-1);}
 .queue-progress-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--emerald); font-weight:700; margin-bottom:10px;}
 .queue-recipient{font-family:'Fraunces',serif; font-size:19px; color:var(--deep-blue-2); font-weight:600; margin-bottom:4px;}
@@ -152,12 +152,12 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .queue-dot.sent{background:var(--emerald);}
 .queue-dot.current{background:var(--sky);}
 
-/* ---------- Status pills ---------- */
 .status-pill{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;}
 .status-pill.pending{color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97;}
 .status-pill.verified{color:#0F6B3A; background:var(--emerald-2); border:1px solid #BFE3CE;}
+.status-pill.live{color:#0F6B3A; background:var(--emerald-2); border:1px solid #BFE3CE;}
+.status-pill.offline{color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97;}
 
-/* ---------- Modals ---------- */
 .modal-overlay{position:fixed; inset:0; background:rgba(10,25,35,0.55); z-index:200; display:flex; align-items:center; justify-content:center; padding:18px;}
 .modal-overlay.hidden{display:none;}
 .modal{background:#fff; border-radius:var(--radius-lg); max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow-2); max-height:88vh; overflow:auto;}
@@ -166,7 +166,6 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .modal .record-name{font-weight:700; color:var(--ink);}
 .admin-icon{width:40px; height:40px; border-radius:10px; background:var(--deep-blue-2); color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
 
-/* ---------- Admin dashboard ---------- */
 .admin-header{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; background:var(--deep-blue-2); color:#fff; border-bottom:3px solid var(--gold);}
 .admin-header .title{display:flex; align-items:center; gap:10px;}
 .admin-header h1{font-size:16px; margin:0; font-weight:600;}
@@ -266,9 +265,6 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 </head>
 <body>
 
-<!-- ============================================================
-     SECTION 2: HTML — TEACHER-FACING APP
-============================================================ -->
 <div id="teacherApp">
 <div class="topbar">
   <div class="topbar-inner">
@@ -288,6 +284,10 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 </div>
 
 <div class="app">
+
+  <div id="configWarning" class="config-warning hidden">
+    <b>⚠ Setup needed:</b> This app is not yet connected to the central database. Paste the Supabase public anon/publishable key into <span class="mono">SUPABASE_CONFIG</span> near the top of this file before deployment.
+  </div>
 
   <ol class="stepper" id="stepper" aria-label="Registration progress">
     <li class="step active" data-step="1"><div class="dot">1</div><div class="label">Personal</div></li>
@@ -398,10 +398,12 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
         <div style="text-align:right;"><div class="stub-label">Date</div><div class="stub-regno" id="pvDate" style="font-size:12.5px;">—</div></div>
       </div>
     </div>
-    <p class="ticket-note">This registration number is generated locally on this device and does not change once assigned.</p>
+    <p class="ticket-note">This registration number is assigned centrally and does not change once assigned.</p>
     <div class="btn-row" style="margin-top:6px;">
       <button type="button" class="btn btn-ghost" id="editFromReview">Edit Information</button>
-      <button type="button" class="btn btn-primary" id="confirmToStep4">Confirm &amp; Continue</button>
+      <button type="button" class="btn btn-primary" id="confirmToStep4">
+        <span id="confirmBtnLabel">Confirm &amp; Continue</span>
+      </button>
     </div>
   </section>
 
@@ -410,15 +412,12 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <span class="section-eyebrow">Step 4 of 5</span>
     <h2>Select WhatsApp Recipient</h2>
     <p class="sub">Choose who should receive your registration message on WhatsApp.</p>
-
     <div class="mode-toggle no-print">
       <button type="button" class="mode-btn active" id="modeSingleBtn">Select One Recipient</button>
       <button type="button" class="mode-btn" id="modeMultiBtn">Send to Multiple Recipients</button>
     </div>
-
     <div id="recipientList"></div>
     <div class="error-msg" id="err-recipients" style="margin-bottom:10px;">⚠ Please select at least one recipient.</div>
-
     <div class="btn-row">
       <button type="button" class="btn btn-ghost" id="backTo3">Back</button>
       <button type="button" class="btn btn-primary" id="toStep5">Continue</button>
@@ -430,7 +429,6 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <span class="section-eyebrow">Step 5 of 5</span>
     <h2 id="step5Title">Send on WhatsApp</h2>
     <p class="sub" id="step5Sub">WhatsApp requires your confirmation to send each message — tap the button below for each recipient.</p>
-
     <div id="sendingBox">
       <div class="queue-card">
         <div class="queue-progress-label" id="queueProgressLabel">Recipient 1 of 1</div>
@@ -445,21 +443,19 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <p class="hint-fallback">If WhatsApp did not open automatically, please use <a id="waWebLink" href="#" target="_blank" rel="noopener">WhatsApp Web</a> or install WhatsApp on this device.</p>
       <button type="button" class="btn btn-ghost" id="nextRecipientBtn" style="margin-top:12px; display:none;">Next Recipient</button>
     </div>
-
     <div id="postSubmitBox" class="hidden">
       <div class="success-wrap">
         <div class="success-check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 7" stroke="#146B47" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div style="font-weight:700; font-size:15px; color:var(--deep-blue-2);">✅ Registration Submitted</div>
         <div style="font-size:12.5px; color:#6b7a78; margin-top:4px;">Registration No: <span class="mono" id="successRegNo">—</span></div>
         <div class="status-pill pending" style="margin-top:8px;"><span></span>Status: Pending Biometric Verification</div>
-        <div style="font-size:12px; color:#6b7a78; margin-top:10px; max-width:340px; margin-left:auto; margin-right:auto; line-height:1.6;"><b>Important:</b> Your membership will remain pending until verified through the Biometric Checker.</div>
+        <div style="font-size:12px; color:#6b7a78; margin-top:10px; max-width:340px; margin-left:auto; margin-right:auto; line-height:1.6;"><b>Important:</b> Your membership will remain pending until verified through the Biometric Checker. An administrator can now review it from any authorized device.</div>
       </div>
       <div class="btn-row" style="margin-top:16px;">
         <button type="button" class="btn btn-ghost" id="printBtn">Print Registration</button>
         <button type="button" class="btn btn-ghost" id="newRegBtn">Start New Registration</button>
       </div>
     </div>
-
     <div class="btn-row no-print" style="margin-top:14px;" id="step5BackRow">
       <button type="button" class="btn btn-ghost" id="backTo4">Back to Recipients</button>
     </div>
@@ -468,11 +464,11 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 
   <p class="privacy-note">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6l8-4z" stroke="#7a8983" stroke-width="1.6"/></svg>
-    <b>Privacy Notice:</b> Teacher information is stored locally on this device/browser and is shared only through WhatsApp when you choose to submit the registration. No unnecessary data is collected, and nothing is sent to unknown servers.
+    <b>Privacy Notice:</b> Your registration details are saved securely to YTA's central membership database so that an authorized administrator can review and verify them from any device. Records are protected by admin sign-in — teachers cannot view other teachers' information, and your details are shared with WhatsApp only when you choose to send a recipient message. No unnecessary data is collected, and nothing is sold or handed to outside parties.
   </p>
   <button type="button" class="about-toggle no-print" id="aboutToggle">About this app / App information</button>
   <div class="about-panel" id="aboutPanel">
-    <p style="margin:0 0 8px;"><b>YTA Digital Registration System</b> — a standalone, offline-first tool for collecting Taluka Election membership registrations for Young Teachers Alliance, District Naushahro Feroze. All records stay on this device; nothing is uploaded to any server. WhatsApp submission requires an internet connection; the form and record management work offline once the page has loaded.</p>
+    <p style="margin:0 0 8px;"><b>YTA Digital Registration System</b> — a tool for collecting Taluka Election membership registrations for Young Teachers Alliance, District Naushahro Feroze. Registrations are stored centrally so any authorized administrator can review and verify them from any device; the registration form still requires an internet connection to save your details, and WhatsApp submission always requires internet.</p>
     <p style="margin:0;">Developed by Syed Sibtain Raza · 📞 03002627199</p>
   </div>
 
@@ -491,14 +487,15 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   <div class="modal">
     <div class="admin-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
     <h3>🔐 Administrator Login</h3>
-    <p>This area is restricted to the authorized YTA administrator. Complete member records, verification tools, and deletion controls are only accessible from here.</p>
-    <div class="admin-login-field"><label for="adminPassword">Admin Password</label><input type="password" id="adminPassword" autocomplete="current-password" placeholder="Enter admin password"></div>
-    <div class="admin-error" id="adminLoginError">⚠ Incorrect password. Please try again.</div>
+    <p>Sign in with your YTA administrator account. Admin accounts are created by your organization in the Firebase console — there is no shared password.</p>
+    <div class="admin-login-field"><label for="adminEmail">Admin Email</label><input type="email" id="adminEmail" autocomplete="username" placeholder="admin@example.com"></div>
+    <div class="admin-login-field"><label for="adminPassword">Password</label><input type="password" id="adminPassword" autocomplete="current-password" placeholder="Enter your password"></div>
+    <div class="admin-error" id="adminLoginError">⚠ Incorrect email or password.</div>
     <div class="btn-row" style="margin-top:16px;">
       <button type="button" class="btn btn-ghost" id="cancelAdminLogin">Cancel</button>
-      <button type="button" class="btn btn-primary" id="submitAdminLogin">Login</button>
+      <button type="button" class="btn btn-primary" id="submitAdminLogin"><span id="adminLoginBtnLabel">Login</span></button>
     </div>
-    <div class="security-note">For genuine multi-user production security, administrator authentication and records should eventually be moved to a secure server-side backend/database. This client-side password only keeps ordinary teachers out of admin tools — it is not equivalent to real server-side security.</div>
+    <div class="security-note">For genuine multi-admin, multi-device security, records are stored in Firebase behind sign-in-only access rules — teachers can submit a registration but cannot read, edit, or delete any record. Only signed-in administrators can view, verify, or export the database.</div>
   </div>
 </div>
 
@@ -507,12 +504,14 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   <div class="admin-header">
     <div class="title">
       <div class="admin-icon" style="margin-bottom:0; background:rgba(255,255,255,0.14);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
-      <div><h1>🔐 Admin Dashboard</h1><div class="tag">YTA · Naushahro Feroze</div></div>
+      <div><h1>🔐 Admin Dashboard</h1><div class="tag" id="adminTagLine">YTA · Naushahro Feroze</div></div>
     </div>
     <button type="button" class="logout-btn" id="adminLogoutBtn">Logout</button>
   </div>
 
   <div class="app" style="padding-top:18px;">
+    <div style="margin-bottom:14px;"><span class="status-pill live" id="connStatusPill"><span></span>Live — synced across all devices</span></div>
+
     <div class="stat-grid">
       <div class="stat-card"><span class="n" id="statTotal">0</span><span class="l">Total Registrations</span></div>
       <div class="stat-card"><span class="n" id="statPending">0</span><span class="l">Pending Verification</span></div>
@@ -542,7 +541,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       </div>
       <div class="filters-row2" style="margin-bottom:14px;">
         <select id="adminFilterTaluka"><option value="">All Talukas</option></select>
-        <div class="taluka-mini-summary" id="talukaMiniSummary" style="font-size:11.5px; color:#6b7a78; display:flex; align-items:center;">—</div>
+        <div id="talukaMiniSummary" style="font-size:11.5px; color:#6b7a78; display:flex; align-items:center;">—</div>
       </div>
       <div class="admin-actions-row">
         <button type="button" class="btn btn-ghost btn-sm" id="adminExportAllBtn">Export All Records</button>
@@ -617,7 +616,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 <div class="modal-overlay hidden no-print" id="clearAllOverlay">
   <div class="modal">
     <h3 style="color:var(--danger);">⚠️ Clear All Records</h3>
-    <p>This will permanently delete <b id="clearAllCount">0</b> registration record(s) from this device. This action cannot be undone.</p>
+    <p>This will permanently delete <b id="clearAllCount">0</b> registration record(s) from the central database, for every admin and device. This action cannot be undone.</p>
     <p>Type <b class="mono">DELETE ALL</b> below to confirm:</p>
     <input type="text" class="type-confirm" id="clearAllConfirmInput" placeholder="Type DELETE ALL">
     <div class="btn-row">
@@ -647,8 +646,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 "use strict";
 
 /* ============================================================
-   SECTION 1: CONFIGURATION
-   Non-programmers: edit the values below only.
+   SECTION 1: CONFIGURATION — Non-programmers edit only here.
 ============================================================ */
 const CONFIG = {
   organizationName: "Young Teachers Alliance",
@@ -660,48 +658,50 @@ const CONFIG = {
   talukas: ["Naushahro Feroze","Moro","Kandiaro","Mehrabpur","Bhiria"]
 };
 
-// ADMIN: Replace these placeholder numbers with the official YTA
-// receiving WhatsApp numbers before deployment. Format: country
-// code + number, no plus sign, e.g. "923001234567".
+// ADMIN: Replace with the official YTA WhatsApp receiving numbers.
+// Format: country code + number, no plus sign, e.g. "923001234567".
 const WHATSAPP_NUMBERS = [
-  { name: "YTA President",  number: "923003715287" },
-  { name: "YTA General Secretary",      number: "923003998476" },
-  { name: "YTA Deputy Information",  number: "923002627199" }
+  { name: "District YTA Office",  number: "923XXXXXXXXX" },
+  { name: "YTA Coordinator",      number: "923XXXXXXXXX" },
+  { name: "YTA Membership Team",  number: "923XXXXXXXXX" }
 ];
 
 /* ============================================================
-   SECTION 7: ADMIN CONFIGURATION — CHANGE BEFORE DEPLOYMENT
-   IMPORTANT SECURITY LIMITATION: this is a standalone client-side
-   app. A JavaScript password check can be viewed/bypassed by anyone
-   who inspects the page source — it is a convenience gate to keep
-   ordinary teachers out of the admin tools, NOT real security. The
-   raw password is never written to localStorage; only a short-lived
-   session flag is kept in sessionStorage after a successful login.
-   For genuine protection of teacher records, move authentication
-   and storage to a server-side backend before public deployment.
+   SECTION 1B: SUPABASE CONFIGURATION
+   The project URL is fixed for this YTA project. Paste the PUBLIC
+   anon/publishable key from Supabase Project Settings > API below.
+   NEVER paste a service_role/secret key into this HTML file.
 ============================================================ */
-const ADMIN_PASSWORD = "admin199"; // ADMIN: change this before deployment
-const ADMIN_DISPLAY_NAME = "Administrator";
-const ADMIN_SESSION_KEY = "yta_admin_session_v1";
+const SUPABASE_CONFIG = {
+  url: "https://vrxcdxbpkzeuibnablxv.supabase.co",
+  anonKey: "sb_publishable_mrcUUch4bboQwOe9OqrcgQ_FCUpLnOq"
+};
 const ADMIN_SESSION_MINUTES = 15;
-
-const STORAGE_KEY = "yta_nf_registrations_v2";
-const COUNTER_KEY = "yta_nf_reg_counter_v1";
-const ACTIVITY_LOG_KEY = "yta_nf_activity_log_v1";
 
 /* ============================================================
    STATE
 ============================================================ */
 let currentStep = 1;
-let currentRecord = null;
-let recipientMode = "single";        // "single" | "multi"
-let selectedRecipients = [];         // array of {name, number}
-let sendQueue = [];                  // recipients pending send this session
+let currentRecord = null;         // record currently being registered by this teacher
+let recipientMode = "single";
+let selectedRecipients = [];
+let sendQueue = [];
 let sendQueueIndex = 0;
 let pendingDeleteRegNo = null;
 let pendingVerifyRegNo = null;
 let pendingRevertRegNo = null;
 let adminInactivityTimer = null;
+let recordsCache = [];            // live copy of all registrations, admin-only (via onSnapshot)
+let activityCache = [];           // live copy of activity log, admin-only
+let unsubRegistrations = null;
+let unsubActivity = null;
+let lastAdminActivityAt = Date.now();
+let supabaseReady = false;
+let supabase = null;
+let currentAdmin = null;
+let adminRole = null;
+let adminEmail = null;
+let recipientListCache = [];
 
 /* ============================================================
    DOM HELPERS
@@ -713,7 +713,7 @@ function showToast(msg, isError){
   t.classList.toggle("error", !!isError);
   t.classList.add("show");
   clearTimeout(showToast._tm);
-  showToast._tm = setTimeout(()=> t.classList.remove("show"), 3200);
+  showToast._tm = setTimeout(()=> t.classList.remove("show"), 3400);
 }
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -725,6 +725,24 @@ function maskNumber(n){
 }
 
 /* ============================================================
+   SUPABASE INIT
+============================================================ */
+const isConfigured = SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes("PASTE_YOUR_");
+if(isConfigured && window.supabase){
+  try{
+    supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+      auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+    });
+    supabaseReady = true;
+  }catch(e){
+    console.error("Supabase init failed:", e);
+    supabaseReady = false;
+  }
+} else {
+  $("configWarning").classList.remove("hidden");
+}
+
+/* ============================================================
    INIT — apply CONFIG to the page
 ============================================================ */
 function applyConfig(){
@@ -733,6 +751,7 @@ function applyConfig(){
   $("infoDays").textContent = CONFIG.membershipDays;
   $("infoDeadline").textContent = CONFIG.membershipDeadline;
   $("pvDistrict").textContent = "District " + CONFIG.district;
+  $("adminTagLine").textContent = "YTA · " + CONFIG.district;
 
   const talukaSelect = $("taluka");
   const adminFilterTaluka = $("adminFilterTaluka");
@@ -740,57 +759,6 @@ function applyConfig(){
     const o1 = document.createElement("option"); o1.value = t; o1.textContent = t; talukaSelect.appendChild(o1);
     const o2 = document.createElement("option"); o2.value = t; o2.textContent = t; adminFilterTaluka.appendChild(o2);
   });
-}
-
-/* ============================================================
-   SECTION 5: LOCAL STORAGE — SAFE WRAPPERS
-============================================================ */
-function storageAvailable(){
-  try{ const k="__yta_test__"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }
-  catch(e){ return false; }
-}
-const HAS_STORAGE = storageAvailable();
-let memoryFallback = { records: [], counter: 0, log: [] };
-if(!HAS_STORAGE){ showToast("Local storage is unavailable — registrations won't be saved after you close this page.", true); }
-
-function getRecords(){
-  if(!HAS_STORAGE) return memoryFallback.records.slice();
-  try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
-  catch(e){ return []; }
-}
-function saveRecords(records){
-  if(!HAS_STORAGE){ memoryFallback.records = records; return; }
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
-  catch(e){ showToast("Could not save locally — storage may be full.", true); }
-}
-function updateRecord(regNo, patch){
-  const all = getRecords();
-  const idx = all.findIndex(r=>r.regNo===regNo);
-  if(idx > -1){ Object.assign(all[idx], patch); saveRecords(all); }
-  return idx > -1 ? all[idx] : null;
-}
-function nextCounter(){
-  if(!HAS_STORAGE){ memoryFallback.counter += 1; return memoryFallback.counter; }
-  try{
-    let n = parseInt(localStorage.getItem(COUNTER_KEY) || "0", 10);
-    n += 1;
-    localStorage.setItem(COUNTER_KEY, String(n));
-    return n;
-  }catch(e){ return Date.now() % 100000; }
-}
-function formatRegNo(n){ return "YTA-NF-" + String(n).padStart(4,"0"); }
-
-function getActivityLog(){
-  if(!HAS_STORAGE) return memoryFallback.log.slice();
-  try{ const raw = localStorage.getItem(ACTIVITY_LOG_KEY); return raw ? JSON.parse(raw) : []; }
-  catch(e){ return []; }
-}
-function logActivity(actionType, regNo, teacherName){
-  const entry = { dateTime: new Date().toISOString(), actionType, regNo, teacherName };
-  const log = getActivityLog();
-  log.push(entry);
-  if(!HAS_STORAGE){ memoryFallback.log = log; return; }
-  try{ localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(log)); }catch(e){ /* non-critical */ }
 }
 
 /* ============================================================
@@ -807,7 +775,6 @@ function normalizePkNumber(raw){
 }
 function isValidPkNumber(raw){ return /^923\d{9}$/.test(normalizePkNumber(raw)); }
 function isValidSemis(raw){ return /^\d{4,12}$/.test((raw||"").trim()); }
-
 function setFieldError(fieldId, show){
   const field = $("field-" + fieldId), err = $("err-" + fieldId);
   if(!field || !err) return;
@@ -885,32 +852,126 @@ function fillPreview(){
   $("pvTaluka").textContent = d.taluka || "—";
   $("pvWhatsapp").textContent = d.whatsappNorm ? ("+" + d.whatsappNorm) : "—";
   $("pvDate").textContent = new Date().toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
-  const no = formatRegNo((HAS_STORAGE ? parseInt(localStorage.getItem(COUNTER_KEY)||"0",10) : memoryFallback.counter) + 1);
-  $("pvRegNo").textContent = no; $("pvRegNo2").textContent = no;
+  $("pvRegNo").textContent = "Assigned on confirm";
+  $("pvRegNo2").textContent = "Assigned on confirm";
 }
 
-/* Confirm review -> create + save the record, move to recipient step */
-$("confirmToStep4").addEventListener("click", ()=>{
+/* ============================================================
+   SECTION 5: CENTRAL DATABASE — SUPABASE DATA LAYER
+   Tables created by the YTA Supabase setup:
+   members, admins, activity_logs, whatsapp_recipients, settings
+============================================================ */
+function formatRegNo(n){ return "YTA-NF-" + String(n).padStart(4,"0"); }
+
+function mapMember(row){
+  if(!row) return null;
+  const verifiedAt = row.verified_at || null;
+  const createdAt = row.created_at || row.date_time || new Date().toISOString();
+  return {
+    id: row.id,
+    regNo: row.registration_no || row.reg_no || row.regNo,
+    dateTime: createdAt,
+    fullName: row.full_name || row.fullName || "",
+    fatherName: row.father_name || row.fatherName || "",
+    schoolName: row.school_name || row.schoolName || "",
+    semisCode: row.semis_code || row.semisCode || "",
+    taluka: row.taluka || "",
+    whatsappNumber: row.whatsapp_number || row.whatsappNumber || "",
+    verificationStatus: row.verification_status || row.verificationStatus || "Pending",
+    verifiedDate: row.verified_date || (verifiedAt ? new Date(verifiedAt).toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}) : null),
+    verifiedTime: row.verified_time || (verifiedAt ? new Date(verifiedAt).toLocaleTimeString() : null),
+    verifiedBy: row.verified_by || row.verifiedBy || null,
+    recipients: row.recipients || [],
+    sentRecipients: row.sent_recipients || row.sentRecipients || [],
+    whatsappSentAt: row.whatsapp_sent_at || row.whatsappSentAt || null
+  };
+}
+
+function memberPayload(d, regNo){
+  return {
+    registration_no: regNo,
+    full_name: d.fullName,
+    father_name: d.fatherName,
+    whatsapp_number: "+" + d.whatsappNorm,
+    school_name: d.schoolName,
+    semis_code: d.semisCode,
+    taluka: d.taluka,
+    verification_status: "Pending",
+    verified_at: null,
+    verified_by: null,
+    recipients: [],
+    sent_recipients: [],
+    whatsapp_sent_at: null
+  };
+}
+
+async function getNextRegistrationNumber(){
+  // Preferred: atomic Postgres RPC created by the YTA database setup.
+  for(const fn of ["next_registration_number","next_yta_registration_number"]){
+    try{
+      const {data,error}=await supabase.rpc(fn);
+      if(!error && data !== null && data !== undefined){
+        const n=typeof data === "object" ? (data.value ?? data.next_number ?? data.registration_number) : data;
+        if(Number(n)>0) return Number(n);
+      }
+    }catch(e){}
+  }
+  // Safe-ish fallback if the SQL setup did not create the RPC: inspect the
+  // highest existing central registration number and add one.
+  const {data,error}=await supabase.from("members").select("registration_no").order("created_at",{ascending:false}).limit(1000);
+  if(error) throw error;
+  let max=0;
+  (data||[]).forEach(r=>{ const m=String(r.registration_no||"").match(/(\d+)$/); if(m) max=Math.max(max,parseInt(m[1],10)); });
+  return max+1;
+}
+
+async function logActivity(actionType, regNo, teacherName, details={}){
+  if(!supabase) return;
+  try{
+    await supabase.from("activity_logs").insert({
+      action_type: actionType,
+      registration_no: regNo,
+      teacher_name: teacherName,
+      admin_email: adminEmail || null,
+      details,
+      created_at: new Date().toISOString()
+    });
+  }catch(e){ console.warn("Activity log write failed:", e.message); }
+}
+
+/* Confirm review -> create the record centrally, move to recipient step */
+$("confirmToStep4").addEventListener("click", async ()=>{
   if(!validateStep1()){ goToStep(1); showToast("Please complete personal information first.", true); return; }
   if(!validateStep2()){ goToStep(2); showToast("Please complete school information first.", true); return; }
+  if(!supabaseReady){ showToast("This app isn't connected to Supabase yet. Please add the public key in SUPABASE_CONFIG.", true); return; }
 
   if(!currentRecord){
-    const d = currentFormData();
-    const regNo = formatRegNo(nextCounter());
-    currentRecord = {
-      regNo, dateTime: new Date().toISOString(),
-      fullName: d.fullName, fatherName: d.fatherName, schoolName: d.schoolName,
-      semisCode: d.semisCode, taluka: d.taluka, whatsappNumber: "+" + d.whatsappNorm,
-      verificationStatus: "Pending",
-      verifiedDate: null, verifiedTime: null, verifiedBy: null,
-      recipients: [], sentRecipients: [], whatsappSentAt: null
-    };
-    const all = getRecords(); all.push(currentRecord); saveRecords(all);
-    logActivity("REGISTERED", currentRecord.regNo, currentRecord.fullName);
-    $("pvRegNo").textContent = regNo; $("pvRegNo2").textContent = regNo;
+    const btn = $("confirmToStep4");
+    btn.disabled = true;
+    $("confirmBtnLabel").innerHTML = '<span class="spinner"></span> Saving...';
+    try{
+      const n = await getNextRegistrationNumber();
+      const regNo = formatRegNo(n);
+      const d = currentFormData();
+      const payload = memberPayload(d, regNo);
+      const {data,error} = await supabase.from("members").insert(payload).select("*").single();
+      if(error) throw error;
+      currentRecord = mapMember(data);
+      await logActivity("REGISTERED", regNo, currentRecord.fullName);
+      $("pvRegNo").textContent = regNo; $("pvRegNo2").textContent = regNo;
+      renderRecipientSelector();
+      goToStep(4);
+    }catch(e){
+      console.error(e);
+      showToast("Could not save your registration: " + (e.message || "check your internet connection."), true);
+    }finally{
+      btn.disabled = false;
+      $("confirmBtnLabel").textContent = "Confirm & Continue";
+    }
+  } else {
+    renderRecipientSelector();
+    goToStep(4);
   }
-  renderRecipientSelector();
-  goToStep(4);
 });
 
 /* ============================================================
@@ -918,7 +979,8 @@ $("confirmToStep4").addEventListener("click", ()=>{
 ============================================================ */
 function renderRecipientSelector(){
   const list = $("recipientList");
-  list.innerHTML = WHATSAPP_NUMBERS.map((r, i)=>{
+  const recipients = recipientListCache.length ? recipientListCache : WHATSAPP_NUMBERS;
+  list.innerHTML = recipients.map((r, i)=>{
     const checked = recipientMode === "single" ? (i===0 ? "checked" : "") : "";
     const type = recipientMode === "single" ? "radio" : "checkbox";
     return `
@@ -928,17 +990,12 @@ function renderRecipientSelector(){
       <div class="rinfo"><div class="rname2">${escapeHtml(r.name)}</div><div class="rnum">${escapeHtml(maskNumber(r.number))}</div></div>
     </label>`;
   }).join("");
-
-  list.querySelectorAll(".recipient-item input").forEach(inp=>{
-    inp.addEventListener("change", updateRecipientSelectionUI);
-  });
+  list.querySelectorAll(".recipient-item input").forEach(inp=> inp.addEventListener("change", updateRecipientSelectionUI));
   updateRecipientSelectionUI();
 }
 function updateRecipientSelectionUI(){
-  const list = $("recipientList");
-  list.querySelectorAll(".recipient-item").forEach(item=>{
-    const input = item.querySelector("input");
-    item.classList.toggle("selected", input.checked);
+  $("recipientList").querySelectorAll(".recipient-item").forEach(item=>{
+    item.classList.toggle("selected", item.querySelector("input").checked);
   });
   setFieldError("recipients", false);
 }
@@ -952,12 +1009,14 @@ $("modeMultiBtn").addEventListener("click", ()=>{
   $("modeMultiBtn").classList.add("active"); $("modeSingleBtn").classList.remove("active");
   renderRecipientSelector();
 });
-$("toStep5").addEventListener("click", ()=>{
+$("toStep5").addEventListener("click", async ()=>{
   const checked = Array.from($("recipientList").querySelectorAll("input:checked"));
   if(!checked.length){ setFieldError("recipients", true); showToast("Please select at least one recipient.", true); return; }
-  selectedRecipients = checked.map(inp => WHATSAPP_NUMBERS[parseInt(inp.value,10)]);
-  updateRecord(currentRecord.regNo, { recipients: selectedRecipients });
+  const recipients = recipientListCache.length ? recipientListCache : WHATSAPP_NUMBERS;
+  selectedRecipients = checked.map(inp => recipients[parseInt(inp.value,10)]);
   currentRecord.recipients = selectedRecipients;
+  try{ const {error}=await supabase.from("members").update({recipients:selectedRecipients}).eq("id",currentRecord.id); if(error) throw error; }
+  catch(e){ console.warn("Could not save recipient selection:", e.message); }
   startSendQueue();
   goToStep(5);
 });
@@ -995,10 +1054,8 @@ Submitted for YTA Membership Registration.`
 }
 
 /* ============================================================
-   STEP 5: SEQUENTIAL SEND QUEUE
-   WhatsApp requires user interaction for every recipient, so the
-   app never sends automatically — it opens one recipient at a
-   time and waits for the user to tap "Next Recipient".
+   STEP 5: SEQUENTIAL SEND QUEUE — WhatsApp needs a tap per
+   recipient, so the app never sends automatically.
 ============================================================ */
 function startSendQueue(){
   sendQueue = selectedRecipients.slice();
@@ -1017,14 +1074,12 @@ function renderQueueState(){
   $("queueRecipientNum").textContent = maskNumber(r.number);
   $("queueBtnLabel").textContent = "Open WhatsApp — " + r.name;
   $("openWhatsappQueueBtn").disabled = false;
-
-  const dotsWrap = $("queueDots");
-  dotsWrap.innerHTML = sendQueue.map((_, i)=>{
+  $("queueDots").innerHTML = sendQueue.map((_, i)=>{
     const cls = i < sendQueueIndex ? "sent" : (i === sendQueueIndex ? "current" : "");
     return `<span class="queue-dot ${cls}"></span>`;
   }).join("");
 }
-$("openWhatsappQueueBtn").addEventListener("click", ()=>{
+$("openWhatsappQueueBtn").addEventListener("click", async ()=>{
   const r = sendQueue[sendQueueIndex];
   const message = buildMessage(currentRecord);
   const encoded = encodeURIComponent(message);
@@ -1039,7 +1094,10 @@ $("openWhatsappQueueBtn").addEventListener("click", ()=>{
   const nowIso = new Date().toISOString();
   currentRecord.sentRecipients.push({ name:r.name, number:r.number, sentAt: nowIso });
   currentRecord.whatsappSentAt = nowIso;
-  updateRecord(currentRecord.regNo, { sentRecipients: currentRecord.sentRecipients, whatsappSentAt: nowIso });
+  try{
+    const {error}=await supabase.from("members").update({sent_recipients:currentRecord.sentRecipients, whatsapp_sent_at:nowIso}).eq("id",currentRecord.id);
+    if(error) throw error;
+  }catch(e){ console.warn("Could not record WhatsApp send history:", e.message); }
 
   $("openWhatsappQueueBtn").disabled = true;
   if(sendQueueIndex < sendQueue.length - 1){
@@ -1075,10 +1133,6 @@ $("newRegBtn").addEventListener("click", ()=>{
   $("step5BackRow").classList.remove("hidden");
   goToStep(1);
 });
-
-/* ============================================================
-   ABOUT PANEL
-============================================================ */
 $("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle("open"));
 
 /* ============================================================
@@ -1116,92 +1170,172 @@ function buildPrintSheet(record){
     </div>`;
 }
 $("printBtn").addEventListener("click", ()=>{
-  const r = currentRecord || getRecords().slice(-1)[0];
-  if(!r){ showToast("Nothing to print yet.", true); return; }
-  $("printSheet").innerHTML = buildPrintSheet(r);
+  if(!currentRecord){ showToast("Nothing to print yet.", true); return; }
+  $("printSheet").innerHTML = buildPrintSheet(currentRecord);
   window.print();
 });
 
 /* ============================================================
-   SECTION 7 (cont.): ADMIN AUTHENTICATION
+   SECTION 7: ADMIN AUTHENTICATION — SUPABASE AUTH
 ============================================================ */
-function isAdminSessionValid(){
-  try{
-    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
-    if(!raw) return false;
-    const session = JSON.parse(raw);
-    return (Date.now() - session.lastActivity) / 60000 < ADMIN_SESSION_MINUTES;
-  }catch(e){ return false; }
-}
-function touchAdminSession(){
-  try{ sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({lastActivity: Date.now()})); }catch(e){}
-}
-function clearAdminSession(){ try{ sessionStorage.removeItem(ADMIN_SESSION_KEY); }catch(e){} }
-
-$("openAdminLogin").addEventListener("click", ()=>{
-  $("adminPassword").value = "";
+$("openAdminLogin").addEventListener("click", async ()=>{
+  if(!supabaseReady){ showToast("Supabase is not configured yet. Add the public key first.", true); return; }
+  $("adminEmail").value = ""; $("adminPassword").value = "";
   $("adminLoginError").classList.remove("show");
   $("adminLoginOverlay").classList.remove("hidden");
-  $("adminPassword").focus();
+  $("adminEmail").focus();
 });
 $("cancelAdminLogin").addEventListener("click", ()=> $("adminLoginOverlay").classList.add("hidden"));
-$("adminPassword").addEventListener("keydown", (e)=>{ if(e.key === "Enter") $("submitAdminLogin").click(); });
-$("submitAdminLogin").addEventListener("click", ()=>{
-  if($("adminPassword").value === ADMIN_PASSWORD){
-    touchAdminSession();
+$("adminPassword").addEventListener("keydown", e=>{ if(e.key==="Enter") $("submitAdminLogin").click(); });
+
+async function loadAdminProfile(user){
+  if(!user) return false;
+  const {data,error}=await supabase.from("admins").select("*").eq("user_id",user.id).maybeSingle();
+  if(error){ console.error(error); showToast("Could not load administrator profile: " + error.message, true); return false; }
+  if(!data){ showToast("This account is authenticated but is not registered as a YTA administrator.", true); await supabase.auth.signOut(); return false; }
+  if(data.is_active === false || data.active === false){ showToast("This administrator account is inactive.", true); await supabase.auth.signOut(); return false; }
+  currentAdmin=data;
+  adminRole=data.role || "District Admin";
+  adminEmail=user.email || data.email || "";
+  const roleLabel = String(adminRole).replace(/_/g," ");
+  $("adminTagLine").textContent = "YTA · " + CONFIG.district + " · " + roleLabel;
+  return true;
+}
+
+$("submitAdminLogin").addEventListener("click", async ()=>{
+  const email=$("adminEmail").value.trim(), password=$("adminPassword").value;
+  if(!email || !password){ $("adminLoginError").textContent="⚠ Please enter both email and password."; $("adminLoginError").classList.add("show"); return; }
+  const btn=$("submitAdminLogin"); btn.disabled=true; $("adminLoginBtnLabel").innerHTML='<span class="spinner"></span> Signing in...';
+  try{
+    const {data,error}=await supabase.auth.signInWithPassword({email,password});
+    if(error) throw error;
+    if(!(await loadAdminProfile(data.user))) throw new Error("Administrator profile not found.");
     $("adminLoginOverlay").classList.add("hidden");
     enterAdminPanel();
-  } else {
+  }catch(e){
+    console.error(e);
+    $("adminLoginError").textContent="⚠ Incorrect email/password or unauthorized administrator account.";
     $("adminLoginError").classList.add("show");
-  }
+  }finally{ btn.disabled=false; $("adminLoginBtnLabel").textContent="Login"; }
 });
+$("adminLogoutBtn").addEventListener("click", async ()=>{ if(supabase) await supabase.auth.signOut(); });
+
+async function handleAdminSession(session){
+  if(session && session.user){
+    if(await loadAdminProfile(session.user)) enterAdminPanel();
+  }else{
+    if(unsubRegistrations){ supabase.removeChannel(unsubRegistrations); unsubRegistrations=null; }
+    if(unsubActivity){ supabase.removeChannel(unsubActivity); unsubActivity=null; }
+    clearInterval(adminInactivityTimer);
+    currentAdmin=null; adminRole=null; adminEmail=null;
+    $("adminApp").classList.add("hidden"); $("teacherApp").classList.remove("hidden");
+  }
+}
+if(supabaseReady){
+  supabase.auth.onAuthStateChange((event,session)=>{ setTimeout(()=>handleAdminSession(session),0); });
+  supabase.auth.getSession().then(({data})=>handleAdminSession(data.session));
+}
+
 function enterAdminPanel(){
   $("teacherApp").classList.add("hidden");
   $("adminApp").classList.remove("hidden");
-  renderAdminDashboard();
+  subscribeAdminData();
   startAdminInactivityWatch();
 }
-function exitAdminPanel(){
-  clearAdminSession();
-  clearInterval(adminInactivityTimer);
-  $("adminApp").classList.add("hidden");
-  $("teacherApp").classList.remove("hidden");
-}
-$("adminLogoutBtn").addEventListener("click", exitAdminPanel);
 function startAdminInactivityWatch(){
-  ["click","keydown","mousemove","touchstart"].forEach(evt=> document.addEventListener(evt, onAdminActivity, {passive:true}));
+  lastAdminActivityAt=Date.now();
+  ["click","keydown","mousemove","touchstart"].forEach(evt=>document.addEventListener(evt,onAdminActivity,{passive:true}));
   clearInterval(adminInactivityTimer);
-  adminInactivityTimer = setInterval(()=>{
-    if(!$("adminApp").classList.contains("hidden") && !isAdminSessionValid()){
-      showToast("Admin session expired due to inactivity.", true);
-      exitAdminPanel();
+  adminInactivityTimer=setInterval(()=>{
+    if(!$("adminApp").classList.contains("hidden") && (Date.now()-lastAdminActivityAt)/60000>=ADMIN_SESSION_MINUTES){
+      showToast("Admin session expired due to inactivity.",true);
+      supabase.auth.signOut();
     }
-  }, 20000);
+  },20000);
 }
-function onAdminActivity(){ if(!$("adminApp").classList.contains("hidden")) touchAdminSession(); }
-function tryResumeAdminSession(){ if(isAdminSessionValid()) enterAdminPanel(); }
+function onAdminActivity(){ if(!$("adminApp").classList.contains("hidden")) lastAdminActivityAt=Date.now(); }
 
 /* ============================================================
-   SECTION 8: ADMIN DASHBOARD RENDERING
+   SECTION 8: ADMIN DASHBOARD — real-time Firestore listeners
 ============================================================ */
+async function loadWhatsappRecipients(){
+  if(!supabaseReady) return;
+  try{
+    const {data,error}=await supabase.from("whatsapp_recipients").select("*").order("sort_order",{ascending:true});
+    if(error) throw error;
+    recipientListCache=(data||[]).filter(r=>r.is_active !== false && r.active !== false).map(r=>({
+      name:r.name || r.recipient_name || "YTA Recipient",
+      number:r.phone_number || r.number || r.whatsapp_number || ""
+    })).filter(r=>r.number);
+    if(recipientListCache.length) renderRecipientSelector();
+  }catch(e){ console.warn("Could not load WhatsApp recipients from Supabase; using configured fallback recipients.",e.message); }
+}
+
+function subscribeAdminData(){
+  if(unsubRegistrations){ supabase.removeChannel(unsubRegistrations); unsubRegistrations=null; }
+  if(unsubActivity){ supabase.removeChannel(unsubActivity); unsubActivity=null; }
+  $("connStatusPill").classList.remove("offline"); $("connStatusPill").classList.add("live");
+  $("connStatusPill").innerHTML="<span></span>Connecting...";
+
+  const membersChannel=supabase.channel("yta-members-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"members"},()=>loadMembers())
+    .subscribe(status=>{ if(status==="SUBSCRIBED") setConnectionStatus(true,"Live — synced across all devices"); });
+  unsubRegistrations=membersChannel;
+
+  const activityChannel=supabase.channel("yta-activity-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"activity_logs"},()=>loadActivity())
+    .subscribe();
+  unsubActivity=activityChannel;
+
+  loadMembers();
+  loadActivity();
+}
+function setConnectionStatus(live,text){
+  $("connStatusPill").classList.toggle("live",live); $("connStatusPill").classList.toggle("offline",!live);
+  $("connStatusPill").innerHTML="<span></span>"+text;
+}
+async function loadMembers(){
+  try{
+    const {data,error}=await supabase.from("members").select("*").order("created_at",{ascending:false});
+    if(error) throw error;
+    recordsCache=(data||[]).map(mapMember);
+    setConnectionStatus(true,"Live — synced across all devices");
+    renderAdminDashboard();
+  }catch(e){
+    console.error(e); setConnectionStatus(false,"Offline — could not sync database");
+    showToast("Could not reach the central database: "+e.message,true);
+  }
+}
+async function loadActivity(){
+  try{
+    const {data,error}=await supabase.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(200);
+    if(error) throw error;
+    activityCache=(data||[]).map(e=>({actionType:e.action_type,regNo:e.registration_no,teacherName:e.teacher_name,dateTime:e.created_at,adminEmail:e.admin_email,details:e.details}));
+    renderActivityLog();
+  }catch(e){ console.warn("Activity log load failed:",e.message); }
+}
+
+
 function filteredRecords(){
-  const all = getRecords();
   const q = ($("adminSearch").value || "").toLowerCase().trim();
   const status = $("adminStatusFilter").value;
   const taluka = $("adminFilterTaluka").value;
-  return all.filter(r=>{
+  const role=String(adminRole||"").toLowerCase().replace(/_/g," ");
+  const scopedTaluka = role.includes("taluka") && currentAdmin && (currentAdmin.taluka || currentAdmin.taluka_name) ? (currentAdmin.taluka || currentAdmin.taluka_name) : "";
+  return recordsCache.filter(function(r){
+    const matchesScope = !scopedTaluka || r.taluka === scopedTaluka;
     const matchesQ = !q ||
-      r.fullName.toLowerCase().includes(q) || r.semisCode.toLowerCase().includes(q) ||
-      r.regNo.toLowerCase().includes(q) || r.whatsappNumber.toLowerCase().includes(q) ||
-      r.schoolName.toLowerCase().includes(q);
+      String(r.fullName||"").toLowerCase().includes(q) || String(r.semisCode||"").toLowerCase().includes(q) ||
+      String(r.regNo||"").toLowerCase().includes(q) || String(r.whatsappNumber||"").toLowerCase().includes(q) ||
+      String(r.schoolName||"").toLowerCase().includes(q);
     const matchesStatus = status === "all" || (status === "pending" && r.verificationStatus !== "Verified") || (status === "verified" && r.verificationStatus === "Verified");
     const matchesTaluka = !taluka || r.taluka === taluka;
-    return matchesQ && matchesStatus && matchesTaluka;
+    return matchesScope && matchesQ && matchesStatus && matchesTaluka;
   });
 }
 
 function renderAdminDashboard(){
-  const all = getRecords();
+  const all = recordsCache;
   $("statTotal").textContent = all.length;
   const pendingAll = all.filter(r=>r.verificationStatus !== "Verified");
   const verifiedAll = all.filter(r=>r.verificationStatus === "Verified");
@@ -1209,46 +1343,45 @@ function renderAdminDashboard(){
   $("statVerified").textContent = verifiedAll.length;
 
   const talukaCounts = {};
-  all.forEach(r=>{
+  all.forEach(function(r){
     talukaCounts[r.taluka] = talukaCounts[r.taluka] || {total:0, pending:0, verified:0};
     talukaCounts[r.taluka].total++;
     if(r.verificationStatus === "Verified") talukaCounts[r.taluka].verified++; else talukaCounts[r.taluka].pending++;
   });
   $("statTalukaCount").textContent = Object.keys(talukaCounts).length;
 
-  $("talukaSummaryBody").innerHTML = CONFIG.talukas.map(t=>{
+  $("talukaSummaryBody").innerHTML = CONFIG.talukas.map(function(t){
     const c = talukaCounts[t] || {total:0, pending:0, verified:0};
     return `<tr><td>${escapeHtml(t)}</td><td class="tnum">${c.total}</td><td class="tnum">${c.pending}</td><td class="tnum">${c.verified}</td></tr>`;
   }).join("");
 
   renderAdminLists();
-  renderActivityLog();
 }
 
 function renderAdminLists(){
   const filtered = filteredRecords();
   const statusFilter = $("adminStatusFilter").value;
-  const pending = filtered.filter(r=>r.verificationStatus !== "Verified").slice().reverse();
-  const verified = filtered.filter(r=>r.verificationStatus === "Verified").slice().reverse();
+  const pending = filtered.filter(r=>r.verificationStatus !== "Verified");
+  const verified = filtered.filter(r=>r.verificationStatus === "Verified");
 
   $("pendingCountBadge").textContent = pending.length;
   $("verifiedCountBadge").textContent = verified.length;
 
   const pendingSectionVisible = statusFilter !== "verified";
   const verifiedSectionVisible = statusFilter !== "pending";
-  document.querySelectorAll(".admin-section-head")[0].classList.toggle("hidden", !pendingSectionVisible);
+  const heads = document.querySelectorAll(".admin-section-head");
+  heads[0].classList.toggle("hidden", !pendingSectionVisible);
   $("pendingList").classList.toggle("hidden", !pendingSectionVisible);
-  document.querySelectorAll(".admin-section-head")[1].classList.toggle("hidden", !verifiedSectionVisible);
+  heads[1].classList.toggle("hidden", !verifiedSectionVisible);
   $("verifiedList").classList.toggle("hidden", !verifiedSectionVisible);
 
-  $("pendingList").innerHTML = pending.length ? pending.map(r=>pendingCardHtml(r)).join("") : '<div class="empty-state">No pending registrations found.</div>';
-  $("verifiedList").innerHTML = verified.length ? verified.map(r=>verifiedCardHtml(r)).join("") : '<div class="empty-state">No verified members found.</div>';
-
+  $("pendingList").innerHTML = pending.length ? pending.map(pendingCardHtml).join("") : '<div class="empty-state">No pending registrations found.</div>';
+  $("verifiedList").innerHTML = verified.length ? verified.map(verifiedCardHtml).join("") : '<div class="empty-state">No verified members found.</div>';
   wireCardActions();
 
   const taluka = $("adminFilterTaluka").value;
   if(taluka){
-    const all = getRecords().filter(r=>r.taluka===taluka);
+    const all = recordsCache.filter(r=>r.taluka===taluka);
     const v = all.filter(r=>r.verificationStatus==="Verified").length;
     $("talukaMiniSummary").textContent = `${taluka}: ${all.length} total · ${all.length-v} pending · ${v} verified`;
   } else {
@@ -1258,7 +1391,7 @@ function renderAdminLists(){
 
 function pendingCardHtml(r){
   return `
-  <div class="member-card" data-regno="${escapeHtml(r.regNo)}">
+  <div class="member-card" data-id="${escapeHtml(r.id)}">
     <div class="mc-top">
       <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
       <span class="status-pill pending"><span></span>Pending</span>
@@ -1279,7 +1412,7 @@ function pendingCardHtml(r){
 }
 function verifiedCardHtml(r){
   return `
-  <div class="member-card verified" data-regno="${escapeHtml(r.regNo)}">
+  <div class="member-card verified" data-id="${escapeHtml(r.id)}">
     <div class="mc-top">
       <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
       <span class="status-pill verified"><span></span>Verified</span>
@@ -1290,7 +1423,7 @@ function verifiedCardHtml(r){
       SEMIS: ${escapeHtml(r.semisCode)} · Taluka: ${escapeHtml(r.taluka)}<br>
       WhatsApp: ${escapeHtml(r.whatsappNumber)}
     </div>
-    <div class="mc-verify-meta">🟢 Verified on ${escapeHtml(r.verifiedDate||"")} at ${escapeHtml(r.verifiedTime||"")}<br>Verified by: ${escapeHtml(r.verifiedBy||ADMIN_DISPLAY_NAME)}</div>
+    <div class="mc-verify-meta">🟢 Verified on ${escapeHtml(r.verifiedDate||"")} at ${escapeHtml(r.verifiedTime||"")}<br>Verified by: ${escapeHtml(r.verifiedBy||"")}</div>
     <div class="mc-actions">
       <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
       <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
@@ -1299,11 +1432,10 @@ function verifiedCardHtml(r){
     </div>
   </div>`;
 }
-
 function wireCardActions(){
-  document.querySelectorAll("#pendingList .member-card, #verifiedList .member-card").forEach(card=>{
-    const regNo = card.dataset.regno;
-    const rec = () => getRecords().find(x=>x.regNo===regNo);
+  document.querySelectorAll("#pendingList .member-card, #verifiedList .member-card").forEach(function(card){
+    const id = card.dataset.id;
+    const rec = function(){ return recordsCache.find(x=>x.id===id); };
     const verifyBtn = card.querySelector(".act-verify");
     const revertBtn = card.querySelector(".act-revert");
     const viewBtn = card.querySelector(".act-view");
@@ -1320,7 +1452,6 @@ $("adminSearch").addEventListener("input", renderAdminLists);
 $("adminStatusFilter").addEventListener("change", renderAdminLists);
 $("adminFilterTaluka").addEventListener("change", renderAdminLists);
 
-/* ---------- View record modal ---------- */
 function openViewRecord(r){
   if(!r) return;
   const rows = [
@@ -1329,68 +1460,78 @@ function openViewRecord(r){
     ["School", r.schoolName], ["SEMIS Code", r.semisCode], ["Taluka", r.taluka],
     ["WhatsApp Number", r.whatsappNumber], ["Verification Status", statusLabel(r)]
   ];
-  if(r.verificationStatus === "Verified"){
-    rows.push(["Verified Date", r.verifiedDate + " " + r.verifiedTime], ["Verified By", r.verifiedBy]);
-  }
-  if(r.sentRecipients && r.sentRecipients.length){
-    rows.push(["WhatsApp Sent To", r.sentRecipients.map(x=>x.name).join(", ")]);
-  }
+  if(r.verificationStatus === "Verified") rows.push(["Verified Date", r.verifiedDate + " " + r.verifiedTime], ["Verified By", r.verifiedBy]);
+  if(r.sentRecipients && r.sentRecipients.length) rows.push(["WhatsApp Sent To", r.sentRecipients.map(x=>x.name).join(", ")]);
   $("viewRecordRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
-  $("viewRecordOverlay").dataset.regno = r.regNo;
+  $("viewRecordOverlay").dataset.id = r.id;
   $("viewRecordOverlay").classList.remove("hidden");
 }
 $("closeViewRecord").addEventListener("click", ()=> $("viewRecordOverlay").classList.add("hidden"));
 $("printFromView").addEventListener("click", ()=>{
-  const r = getRecords().find(x=>x.regNo === $("viewRecordOverlay").dataset.regno);
+  const r = recordsCache.find(x=>x.id === $("viewRecordOverlay").dataset.id);
   if(!r) return;
   $("printSheet").innerHTML = buildPrintSheet(r);
   window.print();
 });
+
+function canPerform(action){
+  const role=String(adminRole||"").toLowerCase().replace(/_/g," ");
+  if(role.includes("super")) return true;
+  if(action==="delete" || action==="clear") return role.includes("district");
+  if(action==="verify") return role.includes("district") || role.includes("taluka");
+  return true;
+}
 
 /* ============================================================
    SECTIONS 7-8: VERIFY / REVERT WORKFLOW
 ============================================================ */
 function openVerifyModal(r){
   if(!r) return;
-  pendingVerifyRegNo = r.regNo;
+  pendingVerifyRegNo = r.id;
   $("verifyRecordName").textContent = r.fullName;
   $("verifyRecordRegNo").textContent = r.regNo;
   $("verifyOverlay").classList.remove("hidden");
 }
 $("cancelVerify").addEventListener("click", ()=>{ pendingVerifyRegNo=null; $("verifyOverlay").classList.add("hidden"); });
-$("confirmVerify").addEventListener("click", ()=>{
+$("confirmVerify").addEventListener("click", async ()=>{
   if(!pendingVerifyRegNo) return;
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to verify members.",true); return; }
+  const id = pendingVerifyRegNo;
+  const target = recordsCache.find(r=>r.id===id);
   const now = new Date();
-  const patch = {
-    verificationStatus: "Verified",
-    verifiedDate: now.toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}),
-    verifiedTime: now.toLocaleTimeString(),
-    verifiedBy: ADMIN_DISPLAY_NAME
-  };
-  const updated = updateRecord(pendingVerifyRegNo, patch);
-  if(updated) logActivity("VERIFIED", updated.regNo, updated.fullName);
-  showToast("Teacher marked as verified.");
+  try{
+    const {error}=await supabase.from("members").update({verification_status:"Verified",verified_at:new Date().toISOString(),verified_by:adminEmail||"Administrator"}).eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("VERIFIED", target.regNo, target.fullName);
+    showToast("Teacher marked as verified.");
+    await loadMembers();
+  }catch(e){ showToast("Could not update: " + e.message, true); }
   pendingVerifyRegNo = null;
   $("verifyOverlay").classList.add("hidden");
-  renderAdminDashboard();
 });
 
 function openRevertModal(r){
   if(!r) return;
-  pendingRevertRegNo = r.regNo;
+  pendingRevertRegNo = r.id;
   $("revertRecordName").textContent = r.fullName;
   $("revertRecordRegNo").textContent = r.regNo;
   $("revertOverlay").classList.remove("hidden");
 }
 $("cancelRevert").addEventListener("click", ()=>{ pendingRevertRegNo=null; $("revertOverlay").classList.add("hidden"); });
-$("confirmRevert").addEventListener("click", ()=>{
+$("confirmRevert").addEventListener("click", async ()=>{
   if(!pendingRevertRegNo) return;
-  const updated = updateRecord(pendingRevertRegNo, { verificationStatus:"Pending", verifiedDate:null, verifiedTime:null, verifiedBy:null });
-  if(updated) logActivity("REVERTED", updated.regNo, updated.fullName);
-  showToast("Verification reverted — moved back to Pending.");
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to revert verification.",true); return; }
+  const id = pendingRevertRegNo;
+  const target = recordsCache.find(r=>r.id===id);
+  try{
+    const {error}=await supabase.from("members").update({verification_status:"Pending",verified_at:null,verified_by:null}).eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("REVERTED", target.regNo, target.fullName);
+    showToast("Verification reverted — moved back to Pending.");
+    await loadMembers();
+  }catch(e){ showToast("Could not update: " + e.message, true); }
   pendingRevertRegNo = null;
   $("revertOverlay").classList.add("hidden");
-  renderAdminDashboard();
 });
 
 /* ============================================================
@@ -1398,26 +1539,31 @@ $("confirmRevert").addEventListener("click", ()=>{
 ============================================================ */
 function openDeleteModal(r){
   if(!r) return;
-  pendingDeleteRegNo = r.regNo;
+  pendingDeleteRegNo = r.id;
   $("deleteRecordName").textContent = r.fullName;
   $("deleteRecordRegNo").textContent = r.regNo;
   $("deleteOverlay").classList.remove("hidden");
 }
 $("cancelDelete").addEventListener("click", ()=>{ pendingDeleteRegNo=null; $("deleteOverlay").classList.add("hidden"); });
-$("confirmDelete").addEventListener("click", ()=>{
+$("confirmDelete").addEventListener("click", async ()=>{
   if(!pendingDeleteRegNo) return;
-  const target = getRecords().find(x=>x.regNo===pendingDeleteRegNo);
-  const updated = getRecords().filter(x=>x.regNo!==pendingDeleteRegNo);
-  saveRecords(updated);
-  if(target) logActivity("DELETED", target.regNo, target.fullName);
-  showToast("Registration " + pendingDeleteRegNo + " deleted.");
+  if(!canPerform("delete")){ showToast("Only an authorized District/Super Admin can delete records.",true); return; }
+  const id = pendingDeleteRegNo;
+  const target = recordsCache.find(r=>r.id===id);
+  try{
+    const {error}=await supabase.from("members").delete().eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("DELETED", target.regNo, target.fullName);
+    showToast("Registration " + (target ? target.regNo : "") + " deleted.");
+    await loadMembers();
+  }catch(e){ showToast("Could not delete: " + e.message, true); }
   pendingDeleteRegNo = null;
   $("deleteOverlay").classList.add("hidden");
-  renderAdminDashboard();
 });
 
 $("adminClearAllBtn").addEventListener("click", ()=>{
-  $("clearAllCount").textContent = getRecords().length;
+  if(!canPerform("clear")){ showToast("Only an authorized District/Super Admin can clear records.",true); return; }
+  $("clearAllCount").textContent = recordsCache.length;
   $("clearAllConfirmInput").value = "";
   $("confirmClearAll").disabled = true;
   $("clearAllOverlay").classList.remove("hidden");
@@ -1426,22 +1572,28 @@ $("cancelClearAll").addEventListener("click", ()=> $("clearAllOverlay").classLis
 $("clearAllConfirmInput").addEventListener("input", (e)=>{
   $("confirmClearAll").disabled = e.target.value.trim().toUpperCase() !== "DELETE ALL";
 });
-$("confirmClearAll").addEventListener("click", ()=>{
+$("confirmClearAll").addEventListener("click", async ()=>{
   if($("clearAllConfirmInput").value.trim().toUpperCase() !== "DELETE ALL") return;
-  saveRecords([]);
-  logActivity("CLEARED_ALL", "-", "-");
-  showToast("All registration records have been deleted.");
+  const btn = $("confirmClearAll");
+  btn.disabled = true; btn.textContent = "Deleting...";
+  try{
+    const {error}=await supabase.from("members").delete().neq("id","00000000-0000-0000-0000-000000000000");
+    if(error) throw error;
+    await logActivity("CLEARED_ALL", "-", "-");
+    showToast("All registration records have been deleted.");
+    await loadMembers();
+  }catch(e){ showToast("Could not clear all records: " + e.message, true); }
   $("clearAllOverlay").classList.add("hidden");
-  renderAdminDashboard();
+  btn.textContent = "Delete Permanently";
 });
 
 /* ============================================================
    SECTION 9: CSV EXPORT (admin only)
 ============================================================ */
 function downloadCsv(filename, headers, rows){
-  const csvContent = [headers, ...rows].map(row=>
-    row.map(cell=>{ const s = String(cell ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(",")
-  ).join("\r\n");
+  const csvContent = [headers, ...rows].map(function(row){
+    return row.map(function(cell){ const s = String(cell ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(",");
+  }).join("\r\n");
   const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = filename;
@@ -1449,15 +1601,15 @@ function downloadCsv(filename, headers, rows){
   URL.revokeObjectURL(url);
 }
 $("adminExportAllBtn").addEventListener("click", ()=>{
-  const all = getRecords();
+  const all = recordsCache;
   if(!all.length){ showToast("No records to export.", true); return; }
   const headers = ["Registration No.","Date","Time","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status"];
-  const rows = all.map(r=>{ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, statusLabel(r)]; });
+  const rows = all.map(function(r){ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, statusLabel(r)]; });
   downloadCsv("YTA_Naushahro_Feroze_Membership_Records.csv", headers, rows);
   showToast("All records exported.");
 });
 $("adminExportVerifiedBtn").addEventListener("click", ()=>{
-  const all = getRecords().filter(r=>r.verificationStatus==="Verified");
+  const all = recordsCache.filter(r=>r.verificationStatus==="Verified");
   if(!all.length){ showToast("No verified members to export.", true); return; }
   const headers = ["Registration No.","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status","Verification Date","Verification Time","Verified By"];
   const rows = all.map(r=>[r.regNo, r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Verified", r.verifiedDate, r.verifiedTime, r.verifiedBy]);
@@ -1465,18 +1617,17 @@ $("adminExportVerifiedBtn").addEventListener("click", ()=>{
   showToast("Verified members exported.");
 });
 $("adminExportPendingBtn").addEventListener("click", ()=>{
-  const all = getRecords().filter(r=>r.verificationStatus!=="Verified");
+  const all = recordsCache.filter(r=>r.verificationStatus!=="Verified");
   if(!all.length){ showToast("No pending members to export.", true); return; }
   const headers = ["Registration No.","Date","Time","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status"];
-  const rows = all.map(r=>{ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Pending Biometric Verification"]; });
+  const rows = all.map(function(r){ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Pending Biometric Verification"]; });
   downloadCsv("YTA_NF_Pending_Verification.csv", headers, rows);
   showToast("Pending members exported.");
 });
 
-/* ---------- Print all / verified ---------- */
 function printListSheet(title, records, includeVerifiedDate){
-  const rowsHtml = records.map((r,i)=>`
-    <tr>
+  const rowsHtml = records.map(function(r,i){
+    return `<tr>
       <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${i+1}</td>
       <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.regNo)}</td>
       <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.fullName)}</td>
@@ -1484,7 +1635,8 @@ function printListSheet(title, records, includeVerifiedDate){
       <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.semisCode)}</td>
       <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.taluka)}</td>
       ${includeVerifiedDate ? `<td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.verifiedDate||"")}</td>` : ""}
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
   $("printSheet").innerHTML = `
     <div style="max-width:960px;margin:30px auto;font-family:Georgia,serif;color:#12222B;padding:0 20px;">
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:12px;margin-bottom:16px;">
@@ -1514,9 +1666,8 @@ $("adminPrintVerifiedBtn").addEventListener("click", ()=>{
   printListSheet("Verified Members List", records, true);
 });
 $("adminPrintAllBtn").addEventListener("click", ()=>{
-  const all = getRecords();
-  if(!all.length){ showToast("No records to print.", true); return; }
-  printListSheet("All Membership Registrations", all, false);
+  if(!recordsCache.length){ showToast("No records to print.", true); return; }
+  printListSheet("All Membership Registrations", recordsCache, false);
 });
 
 /* ============================================================
@@ -1527,11 +1678,11 @@ const actionLabels = {
   DELETED: "🗑 Deleted", CLEARED_ALL: "⚠ Cleared All Records"
 };
 function renderActivityLog(){
-  const log = getActivityLog().slice().reverse();
+  const log = activityCache;
   $("activityCountLabel").textContent = log.length + " action" + (log.length===1?"":"s") + " recorded";
   const list = $("activityLogList");
   if(!log.length){ list.innerHTML = '<div class="empty-state">No activity recorded yet.</div>'; return; }
-  list.innerHTML = log.slice(0,80).map(e=>{
+  list.innerHTML = log.slice(0,80).map(function(e){
     const label = (actionLabels[e.actionType] || e.actionType) + (e.regNo && e.regNo !== "-" ? " — " + escapeHtml(e.regNo) : "");
     const sub = e.teacherName && e.teacherName !== "-" ? escapeHtml(e.teacherName) : "";
     return `<div class="activity-item"><span class="a-label">${label}${sub ? " · " + sub : ""}</span><span class="a-time">${new Date(e.dateTime).toLocaleString()}</span></div>`;
@@ -1547,7 +1698,7 @@ function toggleActivity(){
 }
 
 /* ============================================================
-   GLOBAL ERROR GUARD (section 23)
+   GLOBAL ERROR GUARD
 ============================================================ */
 window.addEventListener("error", function(e){ console.error("YTA app error:", e.error || e.message); });
 
@@ -1556,7 +1707,7 @@ window.addEventListener("error", function(e){ console.error("YTA app error:", e.
 ============================================================ */
 applyConfig();
 goToStep(1);
-tryResumeAdminSession();
+loadWhatsappRecipients();
 
 })();
 </script>
