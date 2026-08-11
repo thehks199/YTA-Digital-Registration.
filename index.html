@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>YTA — Digital Membership &amp; Election Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   SECTION 3: CSS — DESIGN TOKENS
+   --ink #12222B  --deep-blue #0E3B5C  --sky #1C6E9C  --emerald #146B47
+   --gold #BD9330  --paper #F6F5F0  --card #FFFFFF  --line #E1E4DE
+   display: 'Fraunces' | body: 'Inter' | data/mono: 'JetBrains Mono'
+   Signature element: registration preview as a perforated membership
+   stub ticket with a tear line between card and counterfoil.
+   ========================================================= */
+:root{
+  --ink:#12222B; --deep-blue:#0E3B5C; --deep-blue-2:#0A2C46; --sky:#1C6E9C;
+  --emerald:#146B47; --emerald-2:#E4F3EA; --gold:#BD9330; --gold-2:#F4E9CE;
+  --paper:#F6F5F0; --card:#FFFFFF; --line:#E1E4DE; --danger:#B3261E; --danger-bg:#FBEAE9;
+  --radius-lg:18px; --radius-md:12px; --radius-sm:8px;
+  --shadow-1:0 1px 2px rgba(14,59,92,0.06), 0 2px 8px rgba(14,59,92,0.06);
+  --shadow-2:0 8px 24px rgba(14,59,92,0.12);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0; font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--paper); color:var(--ink); min-height:100vh; overflow-x:hidden;}
+h1,h2,h3,.font-display{font-family:'Fraunces',Georgia,serif;}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+:focus-visible{outline:3px solid var(--sky); outline-offset:2px; border-radius:6px;}
+button{font-family:inherit;}
+@media (prefers-reduced-motion: reduce){*{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}}
+
+.app{max-width:640px; margin:0 auto; padding:0 16px 40px;}
+.topbar{background:var(--deep-blue-2); color:#fff; padding:14px 16px 16px; border-bottom:3px solid var(--gold);}
+.topbar-inner{max-width:640px; margin:0 auto;}
+.brand-row{display:flex; align-items:center; gap:12px;}
+.brand-mark{width:46px; height:46px; flex:0 0 auto; border-radius:10px; background:var(--gold); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.35); font-family:'Fraunces',serif; font-weight:700; color:var(--deep-blue-2); font-size:16px;}
+.brand-text .org{font-size:11px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.78; font-weight:600;}
+.brand-text h1{font-size:19px; line-height:1.15; margin:2px 0 0; font-weight:600; letter-spacing:0.01em;}
+.district-line{font-size:12.5px; opacity:0.85; margin-top:2px;}
+.page-title{margin-top:14px; font-size:14.5px; font-weight:600; letter-spacing:0.01em; padding-top:12px; border-top:1px solid rgba(255,255,255,0.16); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.admin-link{background:transparent; border:1px solid rgba(255,255,255,0.35); color:#fff; font-size:11px; padding:6px 10px; border-radius:20px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:5px; opacity:0.85;}
+.admin-link:hover{opacity:1; border-color:var(--gold);}
+
+.stepper{display:flex; gap:4px; margin:16px 0 4px; padding:0; list-style:none;}
+.step{flex:1; text-align:center;}
+.step .dot{width:26px; height:26px; margin:0 auto 5px; border-radius:50%; background:#fff; border:2px solid var(--line); color:#9AA6A0; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; transition:all .2s ease;}
+.step .label{font-size:9.5px; color:#6B7A78; font-weight:600; letter-spacing:0.01em;}
+.step-bar{height:3px; background:var(--line); border-radius:2px; margin-top:-18px; margin-bottom:19px; overflow:hidden;}
+.step-bar-fill{height:100%; background:var(--emerald); width:0%; transition:width .3s ease;}
+.step.active .dot{background:var(--deep-blue); border-color:var(--deep-blue); color:#fff;}
+.step.active .label{color:var(--deep-blue);}
+.step.done .dot{background:var(--emerald); border-color:var(--emerald); color:#fff;}
+.step.done .label{color:var(--emerald);}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-1); padding:20px; margin-bottom:16px;}
+.card h2{font-size:16.5px; margin:0 0 4px; font-weight:600; color:var(--deep-blue-2);}
+.card .sub{font-size:12.5px; color:#68766f; margin:0 0 16px;}
+.section-eyebrow{display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; color:var(--emerald); background:var(--emerald-2); padding:4px 10px; border-radius:20px; margin-bottom:10px;}
+
+.info-card{border-radius:var(--radius-lg); overflow:hidden; margin:16px 0; background:var(--deep-blue-2); color:#fff; box-shadow:var(--shadow-1); border-top:3px solid var(--gold);}
+.info-card-inner{padding:20px;}
+.info-card .kicker{font-size:11px; letter-spacing:0.12em; text-transform:uppercase; opacity:0.85; font-weight:700; color:var(--gold-2);}
+.info-card h2{color:#fff; margin:4px 0 14px; font-size:18px;}
+.info-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+.info-item{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:var(--radius-md); padding:10px 8px; text-align:center;}
+.info-item .num{font-family:'Fraunces',serif; font-size:19px; font-weight:600; display:block; line-height:1.1;}
+.info-item .cap{font-size:10px; opacity:0.85; margin-top:3px; line-height:1.3;}
+.warning-box{margin-top:14px; background:rgba(255,255,255,0.96); color:var(--ink); border-radius:var(--radius-md); padding:12px 14px; font-size:12.5px; line-height:1.5; border-left:4px solid var(--gold);}
+.warning-box b{color:var(--danger);}
+
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--deep-blue-2);}
+.field .req{color:var(--danger); margin-left:2px;}
+.field .hint{font-size:11.5px; color:#7a8983; margin-top:5px;}
+.field input, .field select{width:100%; padding:13px 14px; font-size:15px; border-radius:var(--radius-md); border:1.5px solid var(--line); background:#FCFCFA; color:var(--ink); transition:border-color .15s ease, box-shadow .15s ease; font-family:inherit; min-height:48px;}
+.field input:focus, .field select:focus{border-color:var(--sky); box-shadow:0 0 0 3px rgba(28,110,156,0.14); outline:none; background:#fff;}
+.field.invalid input, .field.invalid select{border-color:var(--danger); background:#FFFBFA;}
+.field .error-msg{display:none; color:var(--danger); font-size:12px; margin-top:6px; font-weight:600;}
+.field .error-msg.show{display:flex; align-items:center; gap:5px;}
+select{appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%230E3B5C' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>"); background-repeat:no-repeat; background-position:right 14px center;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px; padding:14px 18px; border-radius:var(--radius-md); font-size:15px; font-weight:700; border:none; cursor:pointer; transition:transform .1s ease, filter .12s ease, background .12s ease; letter-spacing:0.01em;}
+.btn:active{transform:scale(0.98);}
+.btn:disabled{opacity:0.45; cursor:not-allowed;}
+.btn-primary{background:var(--deep-blue); color:#fff;}
+.btn-primary:hover{background:var(--sky);}
+.btn-whatsapp{background:#1F9E4D; color:#fff;}
+.btn-whatsapp:hover{background:#1B8A43;}
+.btn-ghost{background:#fff; color:var(--deep-blue); border:1.5px solid var(--line);}
+.btn-ghost:hover{border-color:var(--sky); color:var(--sky);}
+.btn-text{background:transparent; color:var(--sky); font-weight:600; width:auto; min-height:auto; padding:8px 4px;}
+.btn-row{display:flex; gap:10px;}
+.btn-row .btn{width:auto; flex:1;}
+.btn-danger{background:var(--danger); color:#fff;}
+.btn-danger:hover{background:#96201A;}
+.btn-danger-outline{background:#fff; border:1.5px solid var(--danger); color:var(--danger);}
+.btn-sm{min-height:36px; padding:8px 12px; font-size:12px;}
+
+.ticket{position:relative; border-radius:var(--radius-lg); overflow:visible; background:var(--card); box-shadow:var(--shadow-2); margin-bottom:16px; border:1px solid var(--line);}
+.ticket-main{padding:22px 20px 18px; position:relative;}
+.ticket-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+.ticket-org .kicker{font-size:10px; letter-spacing:0.13em; text-transform:uppercase; color:var(--emerald); font-weight:700;}
+.ticket-org h3{margin:2px 0 0; font-size:17px; color:var(--deep-blue-2);}
+.ticket-org .district{font-size:12px; color:#6b7a78; margin-top:1px;}
+.seal{width:54px; height:54px; border-radius:50%; flex:0 0 auto; background:var(--gold-2); border:2px solid var(--gold); display:flex; align-items:center; justify-content:center; text-align:center;}
+.seal span{font-family:'Fraunces',serif; font-size:9px; font-weight:700; color:var(--deep-blue-2); line-height:1.1; letter-spacing:0.02em;}
+.ticket-status{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97; padding:5px 10px; border-radius:20px; margin-bottom:14px;}
+.ticket-status .dot{width:7px; height:7px; border-radius:50%; background:#C99A1D;}
+.ticket-rows{display:grid; grid-template-columns:1fr; gap:0;}
+.trow{display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px dashed var(--line);}
+.trow:last-child{border-bottom:none;}
+.trow .k{font-size:11.5px; color:#6b7a78; font-weight:600; flex:0 0 42%;}
+.trow .v{font-size:13.5px; color:var(--ink); font-weight:600; text-align:right; flex:1; word-break:break-word;}
+.trow .v.mono{font-family:'JetBrains Mono',monospace; font-weight:600;}
+.confirm-note{font-size:12px; color:#5c6b66; background:#F3F5F1; border-radius:var(--radius-sm); padding:10px 12px; margin:14px 20px 0; line-height:1.5;}
+.tear{position:relative; height:0; border-top:2px dashed #C7CDC5; margin:18px -1px 0;}
+.tear::before,.tear::after{content:""; position:absolute; top:-11px; width:22px; height:22px; border-radius:50%; background:var(--paper); border:1px solid var(--line);}
+.tear::before{left:-11px;} .tear::after{right:-11px;}
+.ticket-stub{padding:14px 20px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.stub-label{font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#6b7a78; font-weight:700;}
+.stub-regno{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; color:var(--deep-blue-2);}
+.ticket-note{font-size:11.5px; color:#7a8983; text-align:center; margin-top:10px; padding:0 6px;}
+
+.success-wrap{text-align:center; padding:6px 0 4px;}
+.success-check{width:64px; height:64px; margin:0 auto 12px; border-radius:50%; background:var(--emerald-2); display:flex; align-items:center; justify-content:center; animation:pop .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{from{transform:scale(0.5); opacity:0;} to{transform:scale(1); opacity:1;}}
+.success-check svg{width:30px; height:30px;}
+
+/* ---------- Recipient selection ---------- */
+.mode-toggle{display:flex; gap:8px; margin-bottom:16px;}
+.mode-btn{flex:1; padding:11px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-size:13px; font-weight:600; color:#6b7a78; cursor:pointer;}
+.mode-btn.active{background:var(--deep-blue); border-color:var(--deep-blue); color:#fff;}
+.recipient-item{display:flex; align-items:center; gap:12px; padding:13px 14px; border:1.5px solid var(--line); border-radius:var(--radius-md); margin-bottom:10px; cursor:pointer; background:#fff;}
+.recipient-item.selected{border-color:var(--emerald); background:var(--emerald-2);}
+.recipient-item input{width:18px; height:18px; flex:0 0 auto; accent-color:var(--emerald);}
+.recipient-item .wa-ic{width:34px; height:34px; border-radius:50%; background:#E9F7EF; display:flex; align-items:center; justify-content:center; flex:0 0 auto; color:#1F9E4D;}
+.recipient-item .rinfo{flex:1;}
+.recipient-item .rname2{font-weight:700; font-size:13.5px; color:var(--ink);}
+.recipient-item .rnum{font-size:11.5px; color:#6b7a78; font-family:'JetBrains Mono',monospace; margin-top:2px;}
+
+/* ---------- Sequential send queue ---------- */
+.queue-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); padding:26px 20px; text-align:center; box-shadow:var(--shadow-1);}
+.queue-progress-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--emerald); font-weight:700; margin-bottom:10px;}
+.queue-recipient{font-family:'Fraunces',serif; font-size:19px; color:var(--deep-blue-2); font-weight:600; margin-bottom:4px;}
+.queue-recipient-num{font-size:12px; color:#6b7a78; font-family:'JetBrains Mono',monospace; margin-bottom:18px;}
+.queue-dots{display:flex; justify-content:center; gap:6px; margin-top:18px;}
+.queue-dot{width:8px; height:8px; border-radius:50%; background:var(--line);}
+.queue-dot.sent{background:var(--emerald);}
+.queue-dot.current{background:var(--sky);}
+
+/* ---------- Status pills ---------- */
+.status-pill{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;}
+.status-pill.pending{color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97;}
+.status-pill.verified{color:#0F6B3A; background:var(--emerald-2); border:1px solid #BFE3CE;}
+
+/* ---------- Modals ---------- */
+.modal-overlay{position:fixed; inset:0; background:rgba(10,25,35,0.55); z-index:200; display:flex; align-items:center; justify-content:center; padding:18px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:#fff; border-radius:var(--radius-lg); max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow-2); max-height:88vh; overflow:auto;}
+.modal h3{margin:0 0 6px; font-size:17px; color:var(--deep-blue-2); display:flex; align-items:center; gap:8px;}
+.modal p{font-size:13.5px; color:#526059; line-height:1.55; margin:0 0 16px;}
+.modal .record-name{font-weight:700; color:var(--ink);}
+.admin-icon{width:40px; height:40px; border-radius:10px; background:var(--deep-blue-2); color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
+
+/* ---------- Admin dashboard ---------- */
+.admin-header{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; background:var(--deep-blue-2); color:#fff; border-bottom:3px solid var(--gold);}
+.admin-header .title{display:flex; align-items:center; gap:10px;}
+.admin-header h1{font-size:16px; margin:0; font-weight:600;}
+.admin-header .tag{font-size:10.5px; opacity:0.75; letter-spacing:0.08em; text-transform:uppercase;}
+.logout-btn{background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:#fff; padding:8px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer;}
+.logout-btn:hover{background:rgba(255,255,255,0.2);}
+.stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+.stat-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:14px; text-align:center;}
+.stat-card .n{font-family:'Fraunces',serif; font-size:24px; font-weight:600; color:var(--deep-blue-2); display:block;}
+.stat-card .l{font-size:11px; color:#6b7a78; font-weight:600; margin-top:2px;}
+
+.admin-section-head{display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px;}
+.admin-section-head h2{font-size:14.5px; margin:0; display:flex; align-items:center; gap:8px; color:var(--deep-blue-2);}
+.count-badge{background:var(--line); color:var(--ink); font-size:11px; font-weight:700; padding:2px 9px; border-radius:12px;}
+
+.taluka-table-wrap{overflow-x:auto;}
+.taluka-table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:420px;}
+.taluka-table th{text-align:left; padding:8px 6px; border-bottom:2px solid var(--line); color:#6b7a78; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em;}
+.taluka-table td{padding:8px 6px; border-bottom:1px solid #F0F1EC;}
+.taluka-table td.tnum{font-family:'JetBrains Mono',monospace; text-align:center;}
+
+.admin-filters{display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:12px;}
+.admin-filters input, .admin-filters select{padding:11px 12px; border-radius:var(--radius-sm); border:1.5px solid var(--line); font-size:13px; min-height:44px;}
+.filters-row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.admin-actions-row{display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;}
+.admin-actions-row .btn{width:auto; flex:1; min-width:140px;}
+
+.member-card{background:#fff; border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:var(--radius-md); padding:14px; margin-bottom:10px;}
+.member-card.verified{border-left-color:var(--emerald);}
+.member-card .mc-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;}
+.member-card .mc-regno{font-family:'JetBrains Mono',monospace; font-size:11px; color:#6b7a78; font-weight:600;}
+.member-card .mc-name{font-size:14.5px; font-weight:700; color:var(--deep-blue-2); margin-top:2px;}
+.member-card .mc-meta{font-size:12px; color:#6b7a78; line-height:1.75;}
+.member-card .mc-verify-meta{font-size:11px; color:#0F6B3A; margin-top:8px; background:var(--emerald-2); border-radius:8px; padding:7px 10px; line-height:1.6;}
+.member-card .mc-actions{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+.member-card .mc-actions .btn{width:auto; min-height:36px; padding:8px 12px; font-size:12px; flex:0 0 auto;}
+.icon-btn{width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7a78;}
+.icon-btn:hover{border-color:var(--sky); color:var(--sky);}
+.icon-btn.del:hover{border-color:var(--danger); color:var(--danger);}
+.empty-state{text-align:center; padding:22px 10px; color:#7a8983; font-size:12.5px;}
+
+.records-toggle{display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:14px 16px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md);}
+.records-toggle .chev{transition:transform .2s ease;}
+.records-toggle.open .chev{transform:rotate(180deg);}
+.records-panel{display:none; margin-top:12px;}
+.records-panel.open{display:block;}
+.activity-log{max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:4px 0;}
+.activity-item{display:flex; justify-content:space-between; gap:10px; padding:9px 14px; border-bottom:1px solid #F3F4EF; font-size:12px;}
+.activity-item:last-child{border-bottom:none;}
+.activity-item .a-label{font-weight:600; color:var(--ink);}
+.activity-item .a-time{color:#9AA6A0; font-family:'JetBrains Mono',monospace; font-size:10.5px; white-space:nowrap;}
+
+.admin-login-field{margin-bottom:14px;}
+.admin-login-field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px;}
+.admin-login-field input{width:100%; padding:12px 14px; border-radius:var(--radius-md); border:1.5px solid var(--line); font-size:15px; min-height:46px;}
+.admin-error{color:var(--danger); font-size:12.5px; font-weight:600; margin-top:8px; display:none;}
+.admin-error.show{display:block;}
+.type-confirm{width:100%; padding:12px 14px; border-radius:var(--radius-md); border:1.5px solid var(--line); font-size:15px; margin:10px 0; text-transform:uppercase;}
+.security-note{font-size:11px; color:#8a958f; background:#F3F5F1; border-radius:var(--radius-sm); padding:10px 12px; line-height:1.5; margin-top:14px;}
+
+.toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--deep-blue-2); color:#fff; padding:12px 18px; border-radius:30px; font-size:13px; font-weight:600; box-shadow:var(--shadow-2); z-index:300; opacity:0; pointer-events:none; transition:all .22s ease; max-width:90%; text-align:center;}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.toast.error{background:var(--danger);}
+
+.privacy-note{font-size:11.5px; color:#7a8983; text-align:center; line-height:1.6; margin:20px 0 6px; padding:0 8px;}
+.privacy-note svg{vertical-align:-2px; margin-right:3px;}
+.about-toggle{display:block; width:100%; text-align:center; background:none; border:none; color:var(--sky); font-size:12px; font-weight:600; cursor:pointer; margin:10px 0 0; padding:6px;}
+.about-panel{display:none; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 16px; margin-top:10px; font-size:12.5px; color:#526059; line-height:1.6;}
+.about-panel.open{display:block;}
+.app-footer{margin-top:26px; padding:20px 16px 26px; text-align:center; border-top:1px solid var(--line);}
+.app-footer .org-line{font-size:12.5px; font-weight:700; color:var(--deep-blue-2);}
+.app-footer .sub-line{font-size:11px; color:#7a8983; margin-top:2px;}
+.app-footer .dev-credit{margin-top:12px; font-size:11px; color:#8a958f; line-height:1.7;}
+.app-footer .dev-credit b{color:#5c6b66; font-weight:600;}
+.app-footer .divider{width:60px; height:2px; background:var(--gold); margin:14px auto 0; border-radius:2px; opacity:0.6;}
+
+.hidden{display:none !important;}
+.hint-fallback{font-size:12px; color:#7a8983; text-align:center; margin-top:8px;}
+.hint-fallback a{color:var(--sky); font-weight:600;}
+
+@media print{
+  body{background:#fff;}
+  .topbar, .stepper, .step-bar, .btn, .no-print, .toast, .modal-overlay, .about-toggle, .about-panel, .admin-header, .icon-btn{display:none !important;}
+  .app{max-width:100%; padding:0;}
+  .card, .ticket, .member-card{box-shadow:none; border:1px solid #333;}
+  #printSheet{display:block !important;}
+}
+#printSheet{display:none;}
+
+@media (min-width:640px){
+  .app{padding:0 24px 56px;}
+  .info-grid{grid-template-columns:repeat(3,1fr);}
+  .admin-filters{grid-template-columns:2fr 1fr;}
+  .stat-grid{grid-template-columns:repeat(4,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SECTION 2: HTML — TEACHER-FACING APP
+============================================================ -->
+<div id="teacherApp">
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand-row">
+      <div class="brand-mark" aria-hidden="true">YTA</div>
+      <div class="brand-text">
+        <div class="org">Young Teachers Alliance</div>
+        <h1 id="orgNameHeader">YOUNG TEACHERS ALLIANCE</h1>
+        <div class="district-line" id="districtHeader">District Naushahro Feroze</div>
+      </div>
+    </div>
+    <div class="page-title">
+      <span>Taluka Election Membership Registration</span>
+      <button type="button" class="admin-link no-print" id="openAdminLogin">🔐 Admin</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <ol class="stepper" id="stepper" aria-label="Registration progress">
+    <li class="step active" data-step="1"><div class="dot">1</div><div class="label">Personal</div></li>
+    <li class="step" data-step="2"><div class="dot">2</div><div class="label">School</div></li>
+    <li class="step" data-step="3"><div class="dot">3</div><div class="label">Review</div></li>
+    <li class="step" data-step="4"><div class="dot">4</div><div class="label">Recipient</div></li>
+    <li class="step" data-step="5"><div class="dot">5</div><div class="label">Submit</div></li>
+  </ol>
+  <div class="step-bar"><div class="step-bar-fill" id="stepBarFill"></div></div>
+
+  <div class="info-card">
+    <div class="info-card-inner">
+      <div class="kicker">🗳️ Taluka Election Schedule</div>
+      <h2>Registration is open — act before the deadline</h2>
+      <div class="info-grid">
+        <div class="info-item"><span class="num" id="infoDays">4</span><span class="cap">Days to register — until <span id="infoDeadline">Thursday</span></span></div>
+        <div class="info-item"><span class="num">2</span><span class="cap">Days for nomination forms after registration closes</span></div>
+        <div class="info-item"><span class="num">🗳️</span><span class="cap">Election held after the nomination process completes</span></div>
+      </div>
+      <div class="warning-box"><b>⚠️ Important:</b> Only teachers who complete their YTA membership are eligible to submit nomination forms for Taluka-level posts and to take part in the election. All information provided will be verified through the <b>Biometric Checker</b>.</div>
+    </div>
+  </div>
+
+  <form id="regForm" novalidate>
+  <!-- STEP 1 -->
+  <section class="card step-panel" data-step-panel="1">
+    <span class="section-eyebrow">Step 1 of 5</span>
+    <h2>Teacher Information</h2>
+    <p class="sub">Apna naam father ke naam ke sath likhein (as per CNIC / service record).</p>
+    <div class="field" id="field-fullName">
+      <label for="fullName">Full Name<span class="req">*</span></label>
+      <input type="text" id="fullName" placeholder="e.g. Ayesha Bibi" autocomplete="name">
+      <div class="error-msg" id="err-fullName">⚠ Please enter the teacher's full name.</div>
+    </div>
+    <div class="field" id="field-fatherName">
+      <label for="fatherName">Father's Name / Surname<span class="req">*</span></label>
+      <input type="text" id="fatherName" placeholder="e.g. Ghulam Hussain" autocomplete="off">
+      <div class="error-msg" id="err-fatherName">⚠ Please enter father's name / surname.</div>
+    </div>
+    <div class="field" id="field-whatsapp">
+      <label for="whatsappNumber">WhatsApp Number<span class="req">*</span></label>
+      <input type="tel" id="whatsappNumber" placeholder="03001234567" inputmode="tel" autocomplete="tel">
+      <div class="hint">Accepted formats: 03001234567, +923001234567, 923001234567</div>
+      <div class="error-msg" id="err-whatsappNumber">⚠ Please enter a valid Pakistani WhatsApp number.</div>
+    </div>
+    <button type="button" class="btn btn-primary" id="toStep2">Next: School Information</button>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="card step-panel hidden" data-step-panel="2">
+    <span class="section-eyebrow">Step 2 of 5</span>
+    <h2>School Information</h2>
+    <p class="sub">School ka mukammal record darj karein.</p>
+    <div class="field" id="field-schoolName">
+      <label for="schoolName">School Name<span class="req">*</span></label>
+      <input type="text" id="schoolName" placeholder="e.g. GBPS Naushahro Feroze" autocomplete="off">
+      <div class="error-msg" id="err-schoolName">⚠ Please enter the school name.</div>
+    </div>
+    <div class="field" id="field-semis">
+      <label for="semisCode">School SEMIS Code<span class="req">*</span></label>
+      <input type="text" id="semisCode" placeholder="e.g. 401010123" inputmode="numeric">
+      <div class="hint">Numbers only, typically 6–9 digits.</div>
+      <div class="error-msg" id="err-semis">⚠ Please enter a valid SEMIS code (numbers only).</div>
+    </div>
+    <div class="field" id="field-taluka">
+      <label for="taluka">Taluka<span class="req">*</span></label>
+      <select id="taluka"><option value="" selected disabled>Select your Taluka</option></select>
+      <div class="error-msg" id="err-taluka">⚠ Please select your Taluka.</div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="backTo1">Back</button>
+      <button type="button" class="btn btn-primary" id="toStep3">Next: Review</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: REVIEW -->
+  <section class="card step-panel hidden" data-step-panel="3" style="padding:0; background:transparent; border:none; box-shadow:none;">
+    <div style="padding:0 2px;">
+      <span class="section-eyebrow">Step 3 of 5</span>
+      <h2 style="padding:0 2px;">Review Your Membership Registration</h2>
+      <p class="sub" style="padding:0 2px;">Check every detail carefully before continuing.</p>
+    </div>
+    <div class="ticket" id="ticketPreview">
+      <div class="ticket-main">
+        <div class="ticket-head">
+          <div class="ticket-org">
+            <div class="kicker">Young Teachers Alliance</div>
+            <h3>Membership Registration</h3>
+            <div class="district" id="pvDistrict">District Naushahro Feroze</div>
+          </div>
+          <div class="seal" aria-hidden="true"><span>YTA<br>OFFICIAL</span></div>
+        </div>
+        <div class="ticket-status"><span class="dot"></span> Pending Biometric Verification</div>
+        <div class="ticket-rows">
+          <div class="trow"><span class="k">Registration No.</span><span class="v mono" id="pvRegNo2">YTA-NF-—</span></div>
+          <div class="trow"><span class="k">Teacher Name</span><span class="v" id="pvName">—</span></div>
+          <div class="trow"><span class="k">Father's Name / Surname</span><span class="v" id="pvFather">—</span></div>
+          <div class="trow"><span class="k">School</span><span class="v" id="pvSchool">—</span></div>
+          <div class="trow"><span class="k">SEMIS Code</span><span class="v mono" id="pvSemis">—</span></div>
+          <div class="trow"><span class="k">Taluka</span><span class="v" id="pvTaluka">—</span></div>
+          <div class="trow"><span class="k">WhatsApp</span><span class="v mono" id="pvWhatsapp">—</span></div>
+        </div>
+        <p class="confirm-note">I confirm that the information provided above is correct and may be verified through the Biometric Checker.</p>
+      </div>
+      <div class="tear"></div>
+      <div class="ticket-stub">
+        <div><div class="stub-label">Registration No.</div><div class="stub-regno" id="pvRegNo">YTA-NF-—</div></div>
+        <div style="text-align:right;"><div class="stub-label">Date</div><div class="stub-regno" id="pvDate" style="font-size:12.5px;">—</div></div>
+      </div>
+    </div>
+    <p class="ticket-note">This registration number is generated locally on this device and does not change once assigned.</p>
+    <div class="btn-row" style="margin-top:6px;">
+      <button type="button" class="btn btn-ghost" id="editFromReview">Edit Information</button>
+      <button type="button" class="btn btn-primary" id="confirmToStep4">Confirm &amp; Continue</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: RECIPIENT SELECTION -->
+  <section class="card step-panel hidden" data-step-panel="4">
+    <span class="section-eyebrow">Step 4 of 5</span>
+    <h2>Select WhatsApp Recipient</h2>
+    <p class="sub">Choose who should receive your registration message on WhatsApp.</p>
+
+    <div class="mode-toggle no-print">
+      <button type="button" class="mode-btn active" id="modeSingleBtn">Select One Recipient</button>
+      <button type="button" class="mode-btn" id="modeMultiBtn">Send to Multiple Recipients</button>
+    </div>
+
+    <div id="recipientList"></div>
+    <div class="error-msg" id="err-recipients" style="margin-bottom:10px;">⚠ Please select at least one recipient.</div>
+
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="backTo3">Back</button>
+      <button type="button" class="btn btn-primary" id="toStep5">Continue</button>
+    </div>
+  </section>
+
+  <!-- STEP 5: SUBMIT / SEND -->
+  <section class="card step-panel hidden" data-step-panel="5">
+    <span class="section-eyebrow">Step 5 of 5</span>
+    <h2 id="step5Title">Send on WhatsApp</h2>
+    <p class="sub" id="step5Sub">WhatsApp requires your confirmation to send each message — tap the button below for each recipient.</p>
+
+    <div id="sendingBox">
+      <div class="queue-card">
+        <div class="queue-progress-label" id="queueProgressLabel">Recipient 1 of 1</div>
+        <div class="queue-recipient" id="queueRecipientName">—</div>
+        <div class="queue-recipient-num" id="queueRecipientNum">—</div>
+        <button type="button" class="btn btn-whatsapp" id="openWhatsappQueueBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.29-1.38a9.9 9.9 0 0 0 4.75 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.24 0 4.34.87 5.92 2.46a8.3 8.3 0 0 1 2.45 5.92c0 4.6-3.75 8.34-8.35 8.34a8.3 8.3 0 0 1-4.24-1.16l-.3-.18-3.14.82.84-3.06-.2-.32a8.27 8.27 0 0 1-1.27-4.42c0-4.6 3.75-8.4 8.29-8.4zm-3.6 4.13c-.17 0-.44.06-.67.31s-.88.86-.88 2.1.9 2.44 1.02 2.61 1.78 2.85 4.38 3.88c2.16.85 2.6.68 3.07.64.47-.05 1.5-.61 1.71-1.2.21-.59.21-1.1.15-1.2-.06-.11-.23-.17-.48-.29s-1.5-.74-1.73-.82c-.23-.08-.4-.11-.57.12s-.65.82-.8 1c-.15.17-.29.19-.55.06-.25-.12-1.06-.39-2.03-1.25-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.01-.39.11-.51.11-.11.25-.29.37-.44.12-.15.16-.25.24-.42.08-.17.04-.31-.02-.43-.06-.12-.57-1.4-.79-1.91-.2-.5-.41-.43-.57-.44-.15-.01-.32-.01-.49-.01z"/></svg>
+          <span id="queueBtnLabel">Open WhatsApp</span>
+        </button>
+        <div class="queue-dots" id="queueDots"></div>
+      </div>
+      <p class="hint-fallback">If WhatsApp did not open automatically, please use <a id="waWebLink" href="#" target="_blank" rel="noopener">WhatsApp Web</a> or install WhatsApp on this device.</p>
+      <button type="button" class="btn btn-ghost" id="nextRecipientBtn" style="margin-top:12px; display:none;">Next Recipient</button>
+    </div>
+
+    <div id="postSubmitBox" class="hidden">
+      <div class="success-wrap">
+        <div class="success-check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 7" stroke="#146B47" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="font-weight:700; font-size:15px; color:var(--deep-blue-2);">✅ Registration Submitted</div>
+        <div style="font-size:12.5px; color:#6b7a78; margin-top:4px;">Registration No: <span class="mono" id="successRegNo">—</span></div>
+        <div class="status-pill pending" style="margin-top:8px;"><span></span>Status: Pending Biometric Verification</div>
+        <div style="font-size:12px; color:#6b7a78; margin-top:10px; max-width:340px; margin-left:auto; margin-right:auto; line-height:1.6;"><b>Important:</b> Your membership will remain pending until verified through the Biometric Checker.</div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-ghost" id="printBtn">Print Registration</button>
+        <button type="button" class="btn btn-ghost" id="newRegBtn">Start New Registration</button>
+      </div>
+    </div>
+
+    <div class="btn-row no-print" style="margin-top:14px;" id="step5BackRow">
+      <button type="button" class="btn btn-ghost" id="backTo4">Back to Recipients</button>
+    </div>
+  </section>
+  </form>
+
+  <p class="privacy-note">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6l8-4z" stroke="#7a8983" stroke-width="1.6"/></svg>
+    <b>Privacy Notice:</b> Teacher information is stored locally on this device/browser and is shared only through WhatsApp when you choose to submit the registration. No unnecessary data is collected, and nothing is sent to unknown servers.
+  </p>
+  <button type="button" class="about-toggle no-print" id="aboutToggle">About this app / App information</button>
+  <div class="about-panel" id="aboutPanel">
+    <p style="margin:0 0 8px;"><b>YTA Digital Registration System</b> — a standalone, offline-first tool for collecting Taluka Election membership registrations for Young Teachers Alliance, District Naushahro Feroze. All records stay on this device; nothing is uploaded to any server. WhatsApp submission requires an internet connection; the form and record management work offline once the page has loaded.</p>
+    <p style="margin:0;">Developed by Syed Sibtain Raza · 📞 03002627199</p>
+  </div>
+
+  <div class="app-footer">
+    <div class="org-line">Young Teachers Alliance — District Naushahro Feroze</div>
+    <div class="sub-line">Digital Membership Registration System</div>
+    <div class="divider"></div>
+    <div class="dev-credit">Developed by <b>Syed Sibtain Raza</b><br>📞 03002627199</div>
+  </div>
+</div>
+</div>
+<!-- /#teacherApp -->
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal-overlay hidden no-print" id="adminLoginOverlay">
+  <div class="modal">
+    <div class="admin-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
+    <h3>🔐 Administrator Login</h3>
+    <p>This area is restricted to the authorized YTA administrator. Complete member records, verification tools, and deletion controls are only accessible from here.</p>
+    <div class="admin-login-field"><label for="adminPassword">Admin Password</label><input type="password" id="adminPassword" autocomplete="current-password" placeholder="Enter admin password"></div>
+    <div class="admin-error" id="adminLoginError">⚠ Incorrect password. Please try again.</div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button type="button" class="btn btn-ghost" id="cancelAdminLogin">Cancel</button>
+      <button type="button" class="btn btn-primary" id="submitAdminLogin">Login</button>
+    </div>
+    <div class="security-note">For genuine multi-user production security, administrator authentication and records should eventually be moved to a secure server-side backend/database. This client-side password only keeps ordinary teachers out of admin tools — it is not equivalent to real server-side security.</div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="adminApp" class="hidden no-print">
+  <div class="admin-header">
+    <div class="title">
+      <div class="admin-icon" style="margin-bottom:0; background:rgba(255,255,255,0.14);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
+      <div><h1>🔐 Admin Dashboard</h1><div class="tag">YTA · Naushahro Feroze</div></div>
+    </div>
+    <button type="button" class="logout-btn" id="adminLogoutBtn">Logout</button>
+  </div>
+
+  <div class="app" style="padding-top:18px;">
+    <div class="stat-grid">
+      <div class="stat-card"><span class="n" id="statTotal">0</span><span class="l">Total Registrations</span></div>
+      <div class="stat-card"><span class="n" id="statPending">0</span><span class="l">Pending Verification</span></div>
+      <div class="stat-card"><span class="n" id="statVerified">0</span><span class="l">Verified</span></div>
+      <div class="stat-card"><span class="n" id="statTalukaCount">0</span><span class="l">Talukas</span></div>
+    </div>
+
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:14.5px;">Taluka-wise Summary</h2>
+      <div class="taluka-table-wrap">
+        <table class="taluka-table">
+          <thead><tr><th>Taluka</th><th style="text-align:center;">Total</th><th style="text-align:center;">Pending</th><th style="text-align:center;">Verified</th></tr></thead>
+          <tbody id="talukaSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:14.5px;">Search &amp; Filter Records</h2>
+      <div class="admin-filters">
+        <input type="text" id="adminSearch" placeholder="Search name, SEMIS, reg no., WhatsApp, or school">
+        <select id="adminStatusFilter">
+          <option value="all">All Records</option>
+          <option value="pending">Pending Verification</option>
+          <option value="verified">Verified</option>
+        </select>
+      </div>
+      <div class="filters-row2" style="margin-bottom:14px;">
+        <select id="adminFilterTaluka"><option value="">All Talukas</option></select>
+        <div class="taluka-mini-summary" id="talukaMiniSummary" style="font-size:11.5px; color:#6b7a78; display:flex; align-items:center;">—</div>
+      </div>
+      <div class="admin-actions-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportAllBtn">Export All Records</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportVerifiedBtn">Export Verified Members</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportPendingBtn">Export Pending Members</button>
+      </div>
+      <div class="admin-actions-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="adminPrintVerifiedBtn">Print Verified List</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminPrintAllBtn">Print All Records</button>
+        <button type="button" class="btn btn-danger-outline btn-sm" id="adminClearAllBtn">Clear All Records</button>
+      </div>
+    </div>
+
+    <div class="admin-section-head"><h2>🟡 Pending Verification</h2><span class="count-badge" id="pendingCountBadge">0</span></div>
+    <div id="pendingList"></div>
+
+    <div class="admin-section-head"><h2>🟢 Verified Members</h2><span class="count-badge" id="verifiedCountBadge">0</span></div>
+    <div id="verifiedList"></div>
+
+    <div class="records-toggle no-print" id="activityToggle" role="button" tabindex="0" aria-expanded="false">
+      <div><div style="font-weight:700; font-size:13.5px; color:var(--deep-blue-2);">Admin Activity Log</div><div style="font-size:11.5px; color:#6b7a78; margin-top:2px;" id="activityCountLabel">0 actions recorded</div></div>
+      <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b7a78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="records-panel" id="activityPanel"><div class="activity-log" id="activityLogList"></div></div>
+  </div>
+
+  <div class="app-footer">
+    <div class="org-line">YTA Admin Panel — District Naushahro Feroze</div>
+    <div class="divider"></div>
+    <div class="dev-credit">Developed by <b>Syed Sibtain Raza</b><br>📞 03002627199</div>
+  </div>
+</div>
+
+<!-- VERIFY MODAL -->
+<div class="modal-overlay hidden no-print" id="verifyOverlay">
+  <div class="modal">
+    <h3 style="color:var(--emerald);">✓ Verify Teacher</h3>
+    <p>Are you sure that this teacher's information has been successfully verified through the Biometric Checker?<br><br>Teacher: <span class="record-name" id="verifyRecordName">—</span><br>Registration: <span class="mono" id="verifyRecordRegNo">—</span></p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelVerify">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirmVerify" style="background:var(--emerald);">Confirm Verification</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVERT MODAL -->
+<div class="modal-overlay hidden no-print" id="revertOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">↩ Revert Verification?</h3>
+    <p>This teacher will be moved back to the pending verification list.<br><br>Teacher: <span class="record-name" id="revertRecordName">—</span><br>Registration: <span class="mono" id="revertRecordRegNo">—</span></p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelRevert">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmRevert">Revert Verification</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay hidden no-print" id="deleteOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠️ Delete Record</h3>
+    <p>Are you sure you want to permanently delete:<br><span class="record-name" id="deleteRecordName">—</span><br>Registration: <span class="mono" id="deleteRecordRegNo">—</span></p>
+    <p style="color:var(--danger); font-weight:600; font-size:12.5px;">This action cannot be undone.</p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelDelete">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmDelete">Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR ALL MODAL -->
+<div class="modal-overlay hidden no-print" id="clearAllOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠️ Clear All Records</h3>
+    <p>This will permanently delete <b id="clearAllCount">0</b> registration record(s) from this device. This action cannot be undone.</p>
+    <p>Type <b class="mono">DELETE ALL</b> below to confirm:</p>
+    <input type="text" class="type-confirm" id="clearAllConfirmInput" placeholder="Type DELETE ALL">
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelClearAll">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmClearAll" disabled>Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW RECORD MODAL -->
+<div class="modal-overlay hidden no-print" id="viewRecordOverlay">
+  <div class="modal">
+    <h3>Registration Details</h3>
+    <div class="ticket-rows" id="viewRecordRows" style="margin-bottom:12px;"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="closeViewRecord">Close</button>
+      <button type="button" class="btn btn-primary" id="printFromView">Print</button>
+    </div>
+  </div>
+</div>
+
+<div id="printSheet"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   SECTION 1: CONFIGURATION
+   Non-programmers: edit the values below only.
+============================================================ */
+const CONFIG = {
+  organizationName: "Young Teachers Alliance",
+  district: "Naushahro Feroze",
+  developerName: "Syed Sibtain Raza",
+  developerPhone: "03002627199",
+  membershipDeadline: "Thursday",
+  membershipDays: 4,
+  talukas: ["Naushahro Feroze","Moro","Kandiaro","Mehrabpur","Bhiria"]
+};
+
+// ADMIN: Replace these placeholder numbers with the official YTA
+// receiving WhatsApp numbers before deployment. Format: country
+// code + number, no plus sign, e.g. "923001234567".
+const WHATSAPP_NUMBERS = [
+  { name: "District YTA Office",  number: "923XXXXXXXXX" },
+  { name: "YTA Coordinator",      number: "923XXXXXXXXX" },
+  { name: "YTA Membership Team",  number: "923XXXXXXXXX" }
+];
+
+/* ============================================================
+   SECTION 7: ADMIN CONFIGURATION — CHANGE BEFORE DEPLOYMENT
+   IMPORTANT SECURITY LIMITATION: this is a standalone client-side
+   app. A JavaScript password check can be viewed/bypassed by anyone
+   who inspects the page source — it is a convenience gate to keep
+   ordinary teachers out of the admin tools, NOT real security. The
+   raw password is never written to localStorage; only a short-lived
+   session flag is kept in sessionStorage after a successful login.
+   For genuine protection of teacher records, move authentication
+   and storage to a server-side backend before public deployment.
+============================================================ */
+const ADMIN_PASSWORD = "yta-admin-2026"; // ADMIN: change this before deployment
+const ADMIN_DISPLAY_NAME = "Administrator";
+const ADMIN_SESSION_KEY = "yta_admin_session_v1";
+const ADMIN_SESSION_MINUTES = 15;
+
+const STORAGE_KEY = "yta_nf_registrations_v2";
+const COUNTER_KEY = "yta_nf_reg_counter_v1";
+const ACTIVITY_LOG_KEY = "yta_nf_activity_log_v1";
+
+/* ============================================================
+   STATE
+============================================================ */
+let currentStep = 1;
+let currentRecord = null;
+let recipientMode = "single";        // "single" | "multi"
+let selectedRecipients = [];         // array of {name, number}
+let sendQueue = [];                  // recipients pending send this session
+let sendQueueIndex = 0;
+let pendingDeleteRegNo = null;
+let pendingVerifyRegNo = null;
+let pendingRevertRegNo = null;
+let adminInactivityTimer = null;
+
+/* ============================================================
+   DOM HELPERS
+============================================================ */
+const $ = (id) => document.getElementById(id);
+function showToast(msg, isError){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.toggle("error", !!isError);
+  t.classList.add("show");
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=> t.classList.remove("show"), 3200);
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function maskNumber(n){
+  const clean = String(n||"").replace(/\s/g,"");
+  if(clean.length <= 7) return clean;
+  return clean.slice(0,5) + "•".repeat(Math.max(3, clean.length-7)) + clean.slice(-2);
+}
+
+/* ============================================================
+   INIT — apply CONFIG to the page
+============================================================ */
+function applyConfig(){
+  $("orgNameHeader").textContent = CONFIG.organizationName.toUpperCase();
+  $("districtHeader").textContent = "District " + CONFIG.district;
+  $("infoDays").textContent = CONFIG.membershipDays;
+  $("infoDeadline").textContent = CONFIG.membershipDeadline;
+  $("pvDistrict").textContent = "District " + CONFIG.district;
+
+  const talukaSelect = $("taluka");
+  const adminFilterTaluka = $("adminFilterTaluka");
+  CONFIG.talukas.forEach(t=>{
+    const o1 = document.createElement("option"); o1.value = t; o1.textContent = t; talukaSelect.appendChild(o1);
+    const o2 = document.createElement("option"); o2.value = t; o2.textContent = t; adminFilterTaluka.appendChild(o2);
+  });
+}
+
+/* ============================================================
+   SECTION 5: LOCAL STORAGE — SAFE WRAPPERS
+============================================================ */
+function storageAvailable(){
+  try{ const k="__yta_test__"; localStorage.setItem(k,"1"); localStorage.removeItem(k); return true; }
+  catch(e){ return false; }
+}
+const HAS_STORAGE = storageAvailable();
+let memoryFallback = { records: [], counter: 0, log: [] };
+if(!HAS_STORAGE){ showToast("Local storage is unavailable — registrations won't be saved after you close this page.", true); }
+
+function getRecords(){
+  if(!HAS_STORAGE) return memoryFallback.records.slice();
+  try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+function saveRecords(records){
+  if(!HAS_STORAGE){ memoryFallback.records = records; return; }
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+  catch(e){ showToast("Could not save locally — storage may be full.", true); }
+}
+function updateRecord(regNo, patch){
+  const all = getRecords();
+  const idx = all.findIndex(r=>r.regNo===regNo);
+  if(idx > -1){ Object.assign(all[idx], patch); saveRecords(all); }
+  return idx > -1 ? all[idx] : null;
+}
+function nextCounter(){
+  if(!HAS_STORAGE){ memoryFallback.counter += 1; return memoryFallback.counter; }
+  try{
+    let n = parseInt(localStorage.getItem(COUNTER_KEY) || "0", 10);
+    n += 1;
+    localStorage.setItem(COUNTER_KEY, String(n));
+    return n;
+  }catch(e){ return Date.now() % 100000; }
+}
+function formatRegNo(n){ return "YTA-NF-" + String(n).padStart(4,"0"); }
+
+function getActivityLog(){
+  if(!HAS_STORAGE) return memoryFallback.log.slice();
+  try{ const raw = localStorage.getItem(ACTIVITY_LOG_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+function logActivity(actionType, regNo, teacherName){
+  const entry = { dateTime: new Date().toISOString(), actionType, regNo, teacherName };
+  const log = getActivityLog();
+  log.push(entry);
+  if(!HAS_STORAGE){ memoryFallback.log = log; return; }
+  try{ localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(log)); }catch(e){ /* non-critical */ }
+}
+
+/* ============================================================
+   VALIDATION
+============================================================ */
+function normalizePkNumber(raw){
+  let v = (raw || "").trim().replace(/[\s\-()]/g,"");
+  if(v.startsWith("+92")) v = v.slice(1);
+  else if(v.startsWith("0092")) v = v.slice(2);
+  else if(v.startsWith("0") && v.length === 11) v = "92" + v.slice(1);
+  else if(v.startsWith("92")) { /* fine */ }
+  else if(v.length === 10 && v.startsWith("3")) v = "92" + v;
+  return v;
+}
+function isValidPkNumber(raw){ return /^923\d{9}$/.test(normalizePkNumber(raw)); }
+function isValidSemis(raw){ return /^\d{4,12}$/.test((raw||"").trim()); }
+
+function setFieldError(fieldId, show){
+  const field = $("field-" + fieldId), err = $("err-" + fieldId);
+  if(!field || !err) return;
+  field.classList.toggle("invalid", show);
+  err.classList.toggle("show", show);
+}
+function validateStep1(){
+  let ok = true;
+  const fullName = $("fullName").value.trim(), fatherName = $("fatherName").value.trim(), whatsapp = $("whatsappNumber").value.trim();
+  setFieldError("fullName", !fullName); if(!fullName) ok=false;
+  setFieldError("fatherName", !fatherName); if(!fatherName) ok=false;
+  const waValid = whatsapp && isValidPkNumber(whatsapp);
+  setFieldError("whatsappNumber", !waValid); if(!waValid) ok=false;
+  return ok;
+}
+function validateStep2(){
+  let ok = true;
+  const schoolName = $("schoolName").value.trim(), semis = $("semisCode").value.trim(), taluka = $("taluka").value;
+  setFieldError("schoolName", !schoolName); if(!schoolName) ok=false;
+  const semisValid = semis && isValidSemis(semis);
+  setFieldError("semis", !semisValid); if(!semisValid) ok=false;
+  setFieldError("taluka", !taluka); if(!taluka) ok=false;
+  return ok;
+}
+["fullName","fatherName","whatsappNumber","schoolName","semisCode"].forEach(id=>{
+  $(id).addEventListener("input", ()=> setFieldError(id, false));
+});
+$("taluka").addEventListener("change", ()=> setFieldError("taluka", false));
+
+/* ============================================================
+   STEP NAVIGATION
+============================================================ */
+const stepFillPct = {1:6, 2:30, 3:54, 4:78, 5:100};
+function goToStep(n){
+  document.querySelectorAll(".step-panel").forEach(p=>{
+    p.classList.toggle("hidden", parseInt(p.dataset.stepPanel,10) !== n);
+  });
+  document.querySelectorAll(".step").forEach(s=>{
+    const sn = parseInt(s.dataset.step,10);
+    s.classList.toggle("active", sn === n);
+    s.classList.toggle("done", sn < n);
+  });
+  $("stepBarFill").style.width = stepFillPct[n] + "%";
+  currentStep = n;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+$("toStep2").addEventListener("click", ()=>{ if(validateStep1()) goToStep(2); else showToast("Please fix the highlighted fields.", true); });
+$("backTo1").addEventListener("click", ()=> goToStep(1));
+$("toStep3").addEventListener("click", ()=>{
+  if(validateStep2()){ fillPreview(); goToStep(3); }
+  else showToast("Please fix the highlighted fields.", true);
+});
+$("editFromReview").addEventListener("click", ()=> goToStep(2));
+$("backTo4").addEventListener("click", ()=> goToStep(4));
+
+/* ============================================================
+   PREVIEW / TICKET FILL
+============================================================ */
+function currentFormData(){
+  return {
+    fullName: $("fullName").value.trim(),
+    fatherName: $("fatherName").value.trim(),
+    whatsappNorm: normalizePkNumber($("whatsappNumber").value.trim()),
+    schoolName: $("schoolName").value.trim(),
+    semisCode: $("semisCode").value.trim(),
+    taluka: $("taluka").value
+  };
+}
+function fillPreview(){
+  const d = currentFormData();
+  $("pvName").textContent = d.fullName || "—";
+  $("pvFather").textContent = d.fatherName || "—";
+  $("pvSchool").textContent = d.schoolName || "—";
+  $("pvSemis").textContent = d.semisCode || "—";
+  $("pvTaluka").textContent = d.taluka || "—";
+  $("pvWhatsapp").textContent = d.whatsappNorm ? ("+" + d.whatsappNorm) : "—";
+  $("pvDate").textContent = new Date().toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
+  const no = formatRegNo((HAS_STORAGE ? parseInt(localStorage.getItem(COUNTER_KEY)||"0",10) : memoryFallback.counter) + 1);
+  $("pvRegNo").textContent = no; $("pvRegNo2").textContent = no;
+}
+
+/* Confirm review -> create + save the record, move to recipient step */
+$("confirmToStep4").addEventListener("click", ()=>{
+  if(!validateStep1()){ goToStep(1); showToast("Please complete personal information first.", true); return; }
+  if(!validateStep2()){ goToStep(2); showToast("Please complete school information first.", true); return; }
+
+  if(!currentRecord){
+    const d = currentFormData();
+    const regNo = formatRegNo(nextCounter());
+    currentRecord = {
+      regNo, dateTime: new Date().toISOString(),
+      fullName: d.fullName, fatherName: d.fatherName, schoolName: d.schoolName,
+      semisCode: d.semisCode, taluka: d.taluka, whatsappNumber: "+" + d.whatsappNorm,
+      verificationStatus: "Pending",
+      verifiedDate: null, verifiedTime: null, verifiedBy: null,
+      recipients: [], sentRecipients: [], whatsappSentAt: null
+    };
+    const all = getRecords(); all.push(currentRecord); saveRecords(all);
+    logActivity("REGISTERED", currentRecord.regNo, currentRecord.fullName);
+    $("pvRegNo").textContent = regNo; $("pvRegNo2").textContent = regNo;
+  }
+  renderRecipientSelector();
+  goToStep(4);
+});
+
+/* ============================================================
+   STEP 4: RECIPIENT SELECTION
+============================================================ */
+function renderRecipientSelector(){
+  const list = $("recipientList");
+  list.innerHTML = WHATSAPP_NUMBERS.map((r, i)=>{
+    const checked = recipientMode === "single" ? (i===0 ? "checked" : "") : "";
+    const type = recipientMode === "single" ? "radio" : "checkbox";
+    return `
+    <label class="recipient-item" data-idx="${i}">
+      <input type="${type}" name="recipientChoice" value="${i}" ${checked}>
+      <div class="wa-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.29-1.38a9.9 9.9 0 0 0 4.75 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg></div>
+      <div class="rinfo"><div class="rname2">${escapeHtml(r.name)}</div><div class="rnum">${escapeHtml(maskNumber(r.number))}</div></div>
+    </label>`;
+  }).join("");
+
+  list.querySelectorAll(".recipient-item input").forEach(inp=>{
+    inp.addEventListener("change", updateRecipientSelectionUI);
+  });
+  updateRecipientSelectionUI();
+}
+function updateRecipientSelectionUI(){
+  const list = $("recipientList");
+  list.querySelectorAll(".recipient-item").forEach(item=>{
+    const input = item.querySelector("input");
+    item.classList.toggle("selected", input.checked);
+  });
+  setFieldError("recipients", false);
+}
+$("modeSingleBtn").addEventListener("click", ()=>{
+  recipientMode = "single";
+  $("modeSingleBtn").classList.add("active"); $("modeMultiBtn").classList.remove("active");
+  renderRecipientSelector();
+});
+$("modeMultiBtn").addEventListener("click", ()=>{
+  recipientMode = "multi";
+  $("modeMultiBtn").classList.add("active"); $("modeSingleBtn").classList.remove("active");
+  renderRecipientSelector();
+});
+$("toStep5").addEventListener("click", ()=>{
+  const checked = Array.from($("recipientList").querySelectorAll("input:checked"));
+  if(!checked.length){ setFieldError("recipients", true); showToast("Please select at least one recipient.", true); return; }
+  selectedRecipients = checked.map(inp => WHATSAPP_NUMBERS[parseInt(inp.value,10)]);
+  updateRecord(currentRecord.regNo, { recipients: selectedRecipients });
+  currentRecord.recipients = selectedRecipients;
+  startSendQueue();
+  goToStep(5);
+});
+
+/* ============================================================
+   SECTION 6: WHATSAPP MESSAGE BUILDER
+============================================================ */
+function buildMessage(record){
+  return (
+`YOUNG TEACHERS ALLIANCE (YTA)
+District ${CONFIG.district}
+
+Taluka Election Membership Registration
+
+Registration No: ${record.regNo}
+
+Teacher Name: ${record.fullName}
+
+Father's Name / Surname: ${record.fatherName}
+
+School: ${record.schoolName}
+
+SEMIS Code: ${record.semisCode}
+
+Taluka: ${record.taluka}
+
+WhatsApp Number: ${record.whatsappNumber}
+
+Verification Status: Pending Biometric Verification
+
+I confirm that the information provided above is correct and may be verified through the Biometric Checker.
+
+Submitted for YTA Membership Registration.`
+  );
+}
+
+/* ============================================================
+   STEP 5: SEQUENTIAL SEND QUEUE
+   WhatsApp requires user interaction for every recipient, so the
+   app never sends automatically — it opens one recipient at a
+   time and waits for the user to tap "Next Recipient".
+============================================================ */
+function startSendQueue(){
+  sendQueue = selectedRecipients.slice();
+  sendQueueIndex = 0;
+  $("sendingBox").classList.remove("hidden");
+  $("postSubmitBox").classList.add("hidden");
+  $("step5BackRow").classList.remove("hidden");
+  $("nextRecipientBtn").style.display = "none";
+  renderQueueState();
+}
+function renderQueueState(){
+  const total = sendQueue.length;
+  const r = sendQueue[sendQueueIndex];
+  $("queueProgressLabel").textContent = `Recipient ${sendQueueIndex+1} of ${total}`;
+  $("queueRecipientName").textContent = r.name;
+  $("queueRecipientNum").textContent = maskNumber(r.number);
+  $("queueBtnLabel").textContent = "Open WhatsApp — " + r.name;
+  $("openWhatsappQueueBtn").disabled = false;
+
+  const dotsWrap = $("queueDots");
+  dotsWrap.innerHTML = sendQueue.map((_, i)=>{
+    const cls = i < sendQueueIndex ? "sent" : (i === sendQueueIndex ? "current" : "");
+    return `<span class="queue-dot ${cls}"></span>`;
+  }).join("");
+}
+$("openWhatsappQueueBtn").addEventListener("click", ()=>{
+  const r = sendQueue[sendQueueIndex];
+  const message = buildMessage(currentRecord);
+  const encoded = encodeURIComponent(message);
+  const target = (r.number || "").replace(/\D/g,"");
+  const isPlaceholder = !target || /X/i.test(r.number);
+  const waUrl = isPlaceholder ? ("https://wa.me/?text=" + encoded) : ("https://wa.me/" + target + "?text=" + encoded);
+  $("waWebLink").href = waUrl;
+  try{ window.open(waUrl, "_blank"); }catch(e){ /* pop-up blocked — fallback link remains visible */ }
+  if(isPlaceholder) showToast("Note: admin hasn't set this number yet — choose a recipient in WhatsApp.", false);
+  else showToast("Opening WhatsApp — " + r.name, false);
+
+  const nowIso = new Date().toISOString();
+  currentRecord.sentRecipients.push({ name:r.name, number:r.number, sentAt: nowIso });
+  currentRecord.whatsappSentAt = nowIso;
+  updateRecord(currentRecord.regNo, { sentRecipients: currentRecord.sentRecipients, whatsappSentAt: nowIso });
+
+  $("openWhatsappQueueBtn").disabled = true;
+  if(sendQueueIndex < sendQueue.length - 1){
+    $("nextRecipientBtn").style.display = "block";
+    $("nextRecipientBtn").textContent = "Next Recipient — " + sendQueue[sendQueueIndex+1].name;
+  } else {
+    finishSendQueue();
+  }
+});
+$("nextRecipientBtn").addEventListener("click", ()=>{
+  sendQueueIndex += 1;
+  $("nextRecipientBtn").style.display = "none";
+  renderQueueState();
+});
+function finishSendQueue(){
+  $("sendingBox").classList.add("hidden");
+  $("postSubmitBox").classList.remove("hidden");
+  $("step5BackRow").classList.add("hidden");
+  $("successRegNo").textContent = currentRecord.regNo;
+}
+
+/* ============================================================
+   NEW REGISTRATION
+============================================================ */
+$("newRegBtn").addEventListener("click", ()=>{
+  $("regForm").reset();
+  ["fullName","fatherName","whatsappNumber","schoolName","semisCode","taluka"].forEach(id=>setFieldError(id,false));
+  currentRecord = null; selectedRecipients = []; sendQueue = []; sendQueueIndex = 0;
+  recipientMode = "single";
+  $("modeSingleBtn").classList.add("active"); $("modeMultiBtn").classList.remove("active");
+  $("sendingBox").classList.remove("hidden");
+  $("postSubmitBox").classList.add("hidden");
+  $("step5BackRow").classList.remove("hidden");
+  goToStep(1);
+});
+
+/* ============================================================
+   ABOUT PANEL
+============================================================ */
+$("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle("open"));
+
+/* ============================================================
+   SECTION 10: PRINT
+============================================================ */
+function statusLabel(r){ return r.verificationStatus === "Verified" ? "Verified" : "Pending Biometric Verification"; }
+function buildPrintSheet(record){
+  const verifiedBlock = record.verificationStatus === "Verified"
+    ? `<tr><td style="padding:8px 0;color:#555;">Verified Date</td><td style="padding:8px 0;">${escapeHtml(record.verifiedDate||"")} ${escapeHtml(record.verifiedTime||"")}</td></tr>
+       <tr><td style="padding:8px 0;color:#555;">Verified By</td><td style="padding:8px 0;">${escapeHtml(record.verifiedBy||"")}</td></tr>` : "";
+  return `
+    <div style="max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
+      <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:2px;color:#146B47;font-weight:700;">YOUNG TEACHERS ALLIANCE</div>
+        <div style="font-size:13px;color:#555;">District ${CONFIG.district}</div>
+        <h2 style="margin:8px 0 0;">Taluka Election Membership Registration</h2>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px 0;color:#555;width:45%;">Registration No.</td><td style="padding:8px 0;font-weight:700;">${escapeHtml(record.regNo)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Date</td><td style="padding:8px 0;">${new Date(record.dateTime).toLocaleString()}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Teacher Name</td><td style="padding:8px 0;">${escapeHtml(record.fullName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Father's Name / Surname</td><td style="padding:8px 0;">${escapeHtml(record.fatherName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">School</td><td style="padding:8px 0;">${escapeHtml(record.schoolName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">SEMIS Code</td><td style="padding:8px 0;">${escapeHtml(record.semisCode)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Taluka</td><td style="padding:8px 0;">${escapeHtml(record.taluka)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">WhatsApp Number</td><td style="padding:8px 0;">${escapeHtml(record.whatsappNumber)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Verification Status</td><td style="padding:8px 0;">${escapeHtml(statusLabel(record))}</td></tr>
+        ${verifiedBlock}
+      </table>
+      <div style="margin-top:50px;display:flex;justify-content:space-between;">
+        <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Teacher Signature</div>
+        <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Verification / YTA Official</div>
+      </div>
+      <div style="margin-top:40px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
+    </div>`;
+}
+$("printBtn").addEventListener("click", ()=>{
+  const r = currentRecord || getRecords().slice(-1)[0];
+  if(!r){ showToast("Nothing to print yet.", true); return; }
+  $("printSheet").innerHTML = buildPrintSheet(r);
+  window.print();
+});
+
+/* ============================================================
+   SECTION 7 (cont.): ADMIN AUTHENTICATION
+============================================================ */
+function isAdminSessionValid(){
+  try{
+    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
+    if(!raw) return false;
+    const session = JSON.parse(raw);
+    return (Date.now() - session.lastActivity) / 60000 < ADMIN_SESSION_MINUTES;
+  }catch(e){ return false; }
+}
+function touchAdminSession(){
+  try{ sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({lastActivity: Date.now()})); }catch(e){}
+}
+function clearAdminSession(){ try{ sessionStorage.removeItem(ADMIN_SESSION_KEY); }catch(e){} }
+
+$("openAdminLogin").addEventListener("click", ()=>{
+  $("adminPassword").value = "";
+  $("adminLoginError").classList.remove("show");
+  $("adminLoginOverlay").classList.remove("hidden");
+  $("adminPassword").focus();
+});
+$("cancelAdminLogin").addEventListener("click", ()=> $("adminLoginOverlay").classList.add("hidden"));
+$("adminPassword").addEventListener("keydown", (e)=>{ if(e.key === "Enter") $("submitAdminLogin").click(); });
+$("submitAdminLogin").addEventListener("click", ()=>{
+  if($("adminPassword").value === ADMIN_PASSWORD){
+    touchAdminSession();
+    $("adminLoginOverlay").classList.add("hidden");
+    enterAdminPanel();
+  } else {
+    $("adminLoginError").classList.add("show");
+  }
+});
+function enterAdminPanel(){
+  $("teacherApp").classList.add("hidden");
+  $("adminApp").classList.remove("hidden");
+  renderAdminDashboard();
+  startAdminInactivityWatch();
+}
+function exitAdminPanel(){
+  clearAdminSession();
+  clearInterval(adminInactivityTimer);
+  $("adminApp").classList.add("hidden");
+  $("teacherApp").classList.remove("hidden");
+}
+$("adminLogoutBtn").addEventListener("click", exitAdminPanel);
+function startAdminInactivityWatch(){
+  ["click","keydown","mousemove","touchstart"].forEach(evt=> document.addEventListener(evt, onAdminActivity, {passive:true}));
+  clearInterval(adminInactivityTimer);
+  adminInactivityTimer = setInterval(()=>{
+    if(!$("adminApp").classList.contains("hidden") && !isAdminSessionValid()){
+      showToast("Admin session expired due to inactivity.", true);
+      exitAdminPanel();
+    }
+  }, 20000);
+}
+function onAdminActivity(){ if(!$("adminApp").classList.contains("hidden")) touchAdminSession(); }
+function tryResumeAdminSession(){ if(isAdminSessionValid()) enterAdminPanel(); }
+
+/* ============================================================
+   SECTION 8: ADMIN DASHBOARD RENDERING
+============================================================ */
+function filteredRecords(){
+  const all = getRecords();
+  const q = ($("adminSearch").value || "").toLowerCase().trim();
+  const status = $("adminStatusFilter").value;
+  const taluka = $("adminFilterTaluka").value;
+  return all.filter(r=>{
+    const matchesQ = !q ||
+      r.fullName.toLowerCase().includes(q) || r.semisCode.toLowerCase().includes(q) ||
+      r.regNo.toLowerCase().includes(q) || r.whatsappNumber.toLowerCase().includes(q) ||
+      r.schoolName.toLowerCase().includes(q);
+    const matchesStatus = status === "all" || (status === "pending" && r.verificationStatus !== "Verified") || (status === "verified" && r.verificationStatus === "Verified");
+    const matchesTaluka = !taluka || r.taluka === taluka;
+    return matchesQ && matchesStatus && matchesTaluka;
+  });
+}
+
+function renderAdminDashboard(){
+  const all = getRecords();
+  $("statTotal").textContent = all.length;
+  const pendingAll = all.filter(r=>r.verificationStatus !== "Verified");
+  const verifiedAll = all.filter(r=>r.verificationStatus === "Verified");
+  $("statPending").textContent = pendingAll.length;
+  $("statVerified").textContent = verifiedAll.length;
+
+  const talukaCounts = {};
+  all.forEach(r=>{
+    talukaCounts[r.taluka] = talukaCounts[r.taluka] || {total:0, pending:0, verified:0};
+    talukaCounts[r.taluka].total++;
+    if(r.verificationStatus === "Verified") talukaCounts[r.taluka].verified++; else talukaCounts[r.taluka].pending++;
+  });
+  $("statTalukaCount").textContent = Object.keys(talukaCounts).length;
+
+  $("talukaSummaryBody").innerHTML = CONFIG.talukas.map(t=>{
+    const c = talukaCounts[t] || {total:0, pending:0, verified:0};
+    return `<tr><td>${escapeHtml(t)}</td><td class="tnum">${c.total}</td><td class="tnum">${c.pending}</td><td class="tnum">${c.verified}</td></tr>`;
+  }).join("");
+
+  renderAdminLists();
+  renderActivityLog();
+}
+
+function renderAdminLists(){
+  const filtered = filteredRecords();
+  const statusFilter = $("adminStatusFilter").value;
+  const pending = filtered.filter(r=>r.verificationStatus !== "Verified").slice().reverse();
+  const verified = filtered.filter(r=>r.verificationStatus === "Verified").slice().reverse();
+
+  $("pendingCountBadge").textContent = pending.length;
+  $("verifiedCountBadge").textContent = verified.length;
+
+  const pendingSectionVisible = statusFilter !== "verified";
+  const verifiedSectionVisible = statusFilter !== "pending";
+  document.querySelectorAll(".admin-section-head")[0].classList.toggle("hidden", !pendingSectionVisible);
+  $("pendingList").classList.toggle("hidden", !pendingSectionVisible);
+  document.querySelectorAll(".admin-section-head")[1].classList.toggle("hidden", !verifiedSectionVisible);
+  $("verifiedList").classList.toggle("hidden", !verifiedSectionVisible);
+
+  $("pendingList").innerHTML = pending.length ? pending.map(r=>pendingCardHtml(r)).join("") : '<div class="empty-state">No pending registrations found.</div>';
+  $("verifiedList").innerHTML = verified.length ? verified.map(r=>verifiedCardHtml(r)).join("") : '<div class="empty-state">No verified members found.</div>';
+
+  wireCardActions();
+
+  const taluka = $("adminFilterTaluka").value;
+  if(taluka){
+    const all = getRecords().filter(r=>r.taluka===taluka);
+    const v = all.filter(r=>r.verificationStatus==="Verified").length;
+    $("talukaMiniSummary").textContent = `${taluka}: ${all.length} total · ${all.length-v} pending · ${v} verified`;
+  } else {
+    $("talukaMiniSummary").textContent = "Select a Taluka to see its summary";
+  }
+}
+
+function pendingCardHtml(r){
+  return `
+  <div class="member-card" data-regno="${escapeHtml(r.regNo)}">
+    <div class="mc-top">
+      <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      <span class="status-pill pending"><span></span>Pending</span>
+    </div>
+    <div class="mc-meta">
+      Father's Name: ${escapeHtml(r.fatherName)}<br>
+      School: ${escapeHtml(r.schoolName)}<br>
+      SEMIS: ${escapeHtml(r.semisCode)} · Taluka: ${escapeHtml(r.taluka)}<br>
+      WhatsApp: ${escapeHtml(r.whatsappNumber)}
+    </div>
+    <div class="mc-actions">
+      <button type="button" class="btn btn-primary btn-sm act-verify">✓ Verify</button>
+      <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
+      <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
+      <button type="button" class="icon-btn del act-delete" title="Delete" aria-label="Delete registration"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>`;
+}
+function verifiedCardHtml(r){
+  return `
+  <div class="member-card verified" data-regno="${escapeHtml(r.regNo)}">
+    <div class="mc-top">
+      <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      <span class="status-pill verified"><span></span>Verified</span>
+    </div>
+    <div class="mc-meta">
+      Father's Name: ${escapeHtml(r.fatherName)}<br>
+      School: ${escapeHtml(r.schoolName)}<br>
+      SEMIS: ${escapeHtml(r.semisCode)} · Taluka: ${escapeHtml(r.taluka)}<br>
+      WhatsApp: ${escapeHtml(r.whatsappNumber)}
+    </div>
+    <div class="mc-verify-meta">🟢 Verified on ${escapeHtml(r.verifiedDate||"")} at ${escapeHtml(r.verifiedTime||"")}<br>Verified by: ${escapeHtml(r.verifiedBy||ADMIN_DISPLAY_NAME)}</div>
+    <div class="mc-actions">
+      <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
+      <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
+      <button type="button" class="btn btn-danger-outline btn-sm act-revert">↩ Revert</button>
+      <button type="button" class="icon-btn del act-delete" title="Delete" aria-label="Delete registration"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>`;
+}
+
+function wireCardActions(){
+  document.querySelectorAll("#pendingList .member-card, #verifiedList .member-card").forEach(card=>{
+    const regNo = card.dataset.regno;
+    const rec = () => getRecords().find(x=>x.regNo===regNo);
+    const verifyBtn = card.querySelector(".act-verify");
+    const revertBtn = card.querySelector(".act-revert");
+    const viewBtn = card.querySelector(".act-view");
+    const printBtn = card.querySelector(".act-print");
+    const delBtn = card.querySelector(".act-delete");
+    if(verifyBtn) verifyBtn.addEventListener("click", ()=> openVerifyModal(rec()));
+    if(revertBtn) revertBtn.addEventListener("click", ()=> openRevertModal(rec()));
+    if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
+    if(printBtn) printBtn.addEventListener("click", ()=>{ $("printSheet").innerHTML = buildPrintSheet(rec()); window.print(); });
+    if(delBtn) delBtn.addEventListener("click", ()=> openDeleteModal(rec()));
+  });
+}
+$("adminSearch").addEventListener("input", renderAdminLists);
+$("adminStatusFilter").addEventListener("change", renderAdminLists);
+$("adminFilterTaluka").addEventListener("change", renderAdminLists);
+
+/* ---------- View record modal ---------- */
+function openViewRecord(r){
+  if(!r) return;
+  const rows = [
+    ["Registration No.", r.regNo], ["Date/Time", new Date(r.dateTime).toLocaleString()],
+    ["Teacher Name", r.fullName], ["Father's Name / Surname", r.fatherName],
+    ["School", r.schoolName], ["SEMIS Code", r.semisCode], ["Taluka", r.taluka],
+    ["WhatsApp Number", r.whatsappNumber], ["Verification Status", statusLabel(r)]
+  ];
+  if(r.verificationStatus === "Verified"){
+    rows.push(["Verified Date", r.verifiedDate + " " + r.verifiedTime], ["Verified By", r.verifiedBy]);
+  }
+  if(r.sentRecipients && r.sentRecipients.length){
+    rows.push(["WhatsApp Sent To", r.sentRecipients.map(x=>x.name).join(", ")]);
+  }
+  $("viewRecordRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
+  $("viewRecordOverlay").dataset.regno = r.regNo;
+  $("viewRecordOverlay").classList.remove("hidden");
+}
+$("closeViewRecord").addEventListener("click", ()=> $("viewRecordOverlay").classList.add("hidden"));
+$("printFromView").addEventListener("click", ()=>{
+  const r = getRecords().find(x=>x.regNo === $("viewRecordOverlay").dataset.regno);
+  if(!r) return;
+  $("printSheet").innerHTML = buildPrintSheet(r);
+  window.print();
+});
+
+/* ============================================================
+   SECTIONS 7-8: VERIFY / REVERT WORKFLOW
+============================================================ */
+function openVerifyModal(r){
+  if(!r) return;
+  pendingVerifyRegNo = r.regNo;
+  $("verifyRecordName").textContent = r.fullName;
+  $("verifyRecordRegNo").textContent = r.regNo;
+  $("verifyOverlay").classList.remove("hidden");
+}
+$("cancelVerify").addEventListener("click", ()=>{ pendingVerifyRegNo=null; $("verifyOverlay").classList.add("hidden"); });
+$("confirmVerify").addEventListener("click", ()=>{
+  if(!pendingVerifyRegNo) return;
+  const now = new Date();
+  const patch = {
+    verificationStatus: "Verified",
+    verifiedDate: now.toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}),
+    verifiedTime: now.toLocaleTimeString(),
+    verifiedBy: ADMIN_DISPLAY_NAME
+  };
+  const updated = updateRecord(pendingVerifyRegNo, patch);
+  if(updated) logActivity("VERIFIED", updated.regNo, updated.fullName);
+  showToast("Teacher marked as verified.");
+  pendingVerifyRegNo = null;
+  $("verifyOverlay").classList.add("hidden");
+  renderAdminDashboard();
+});
+
+function openRevertModal(r){
+  if(!r) return;
+  pendingRevertRegNo = r.regNo;
+  $("revertRecordName").textContent = r.fullName;
+  $("revertRecordRegNo").textContent = r.regNo;
+  $("revertOverlay").classList.remove("hidden");
+}
+$("cancelRevert").addEventListener("click", ()=>{ pendingRevertRegNo=null; $("revertOverlay").classList.add("hidden"); });
+$("confirmRevert").addEventListener("click", ()=>{
+  if(!pendingRevertRegNo) return;
+  const updated = updateRecord(pendingRevertRegNo, { verificationStatus:"Pending", verifiedDate:null, verifiedTime:null, verifiedBy:null });
+  if(updated) logActivity("REVERTED", updated.regNo, updated.fullName);
+  showToast("Verification reverted — moved back to Pending.");
+  pendingRevertRegNo = null;
+  $("revertOverlay").classList.add("hidden");
+  renderAdminDashboard();
+});
+
+/* ============================================================
+   SECTION 20: DELETE PROTECTION
+============================================================ */
+function openDeleteModal(r){
+  if(!r) return;
+  pendingDeleteRegNo = r.regNo;
+  $("deleteRecordName").textContent = r.fullName;
+  $("deleteRecordRegNo").textContent = r.regNo;
+  $("deleteOverlay").classList.remove("hidden");
+}
+$("cancelDelete").addEventListener("click", ()=>{ pendingDeleteRegNo=null; $("deleteOverlay").classList.add("hidden"); });
+$("confirmDelete").addEventListener("click", ()=>{
+  if(!pendingDeleteRegNo) return;
+  const target = getRecords().find(x=>x.regNo===pendingDeleteRegNo);
+  const updated = getRecords().filter(x=>x.regNo!==pendingDeleteRegNo);
+  saveRecords(updated);
+  if(target) logActivity("DELETED", target.regNo, target.fullName);
+  showToast("Registration " + pendingDeleteRegNo + " deleted.");
+  pendingDeleteRegNo = null;
+  $("deleteOverlay").classList.add("hidden");
+  renderAdminDashboard();
+});
+
+$("adminClearAllBtn").addEventListener("click", ()=>{
+  $("clearAllCount").textContent = getRecords().length;
+  $("clearAllConfirmInput").value = "";
+  $("confirmClearAll").disabled = true;
+  $("clearAllOverlay").classList.remove("hidden");
+});
+$("cancelClearAll").addEventListener("click", ()=> $("clearAllOverlay").classList.add("hidden"));
+$("clearAllConfirmInput").addEventListener("input", (e)=>{
+  $("confirmClearAll").disabled = e.target.value.trim().toUpperCase() !== "DELETE ALL";
+});
+$("confirmClearAll").addEventListener("click", ()=>{
+  if($("clearAllConfirmInput").value.trim().toUpperCase() !== "DELETE ALL") return;
+  saveRecords([]);
+  logActivity("CLEARED_ALL", "-", "-");
+  showToast("All registration records have been deleted.");
+  $("clearAllOverlay").classList.add("hidden");
+  renderAdminDashboard();
+});
+
+/* ============================================================
+   SECTION 9: CSV EXPORT (admin only)
+============================================================ */
+function downloadCsv(filename, headers, rows){
+  const csvContent = [headers, ...rows].map(row=>
+    row.map(cell=>{ const s = String(cell ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(",")
+  ).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+$("adminExportAllBtn").addEventListener("click", ()=>{
+  const all = getRecords();
+  if(!all.length){ showToast("No records to export.", true); return; }
+  const headers = ["Registration No.","Date","Time","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status"];
+  const rows = all.map(r=>{ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, statusLabel(r)]; });
+  downloadCsv("YTA_Naushahro_Feroze_Membership_Records.csv", headers, rows);
+  showToast("All records exported.");
+});
+$("adminExportVerifiedBtn").addEventListener("click", ()=>{
+  const all = getRecords().filter(r=>r.verificationStatus==="Verified");
+  if(!all.length){ showToast("No verified members to export.", true); return; }
+  const headers = ["Registration No.","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status","Verification Date","Verification Time","Verified By"];
+  const rows = all.map(r=>[r.regNo, r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Verified", r.verifiedDate, r.verifiedTime, r.verifiedBy]);
+  downloadCsv("YTA_NF_Verified_Members.csv", headers, rows);
+  showToast("Verified members exported.");
+});
+$("adminExportPendingBtn").addEventListener("click", ()=>{
+  const all = getRecords().filter(r=>r.verificationStatus!=="Verified");
+  if(!all.length){ showToast("No pending members to export.", true); return; }
+  const headers = ["Registration No.","Date","Time","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status"];
+  const rows = all.map(r=>{ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Pending Biometric Verification"]; });
+  downloadCsv("YTA_NF_Pending_Verification.csv", headers, rows);
+  showToast("Pending members exported.");
+});
+
+/* ---------- Print all / verified ---------- */
+function printListSheet(title, records, includeVerifiedDate){
+  const rowsHtml = records.map((r,i)=>`
+    <tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${i+1}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.regNo)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.fullName)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.schoolName)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.semisCode)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.taluka)}</td>
+      ${includeVerifiedDate ? `<td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.verifiedDate||"")}</td>` : ""}
+    </tr>`).join("");
+  $("printSheet").innerHTML = `
+    <div style="max-width:960px;margin:30px auto;font-family:Georgia,serif;color:#12222B;padding:0 20px;">
+      <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:12px;margin-bottom:16px;">
+        <div style="font-size:11px;letter-spacing:2px;color:#146B47;font-weight:700;">YOUNG TEACHERS ALLIANCE</div>
+        <div style="font-size:12px;color:#555;">District ${CONFIG.district}</div>
+        <h2 style="margin:6px 0 0;">${title}</h2>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Sr. No.</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Reg. No.</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Teacher Name</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">School</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">SEMIS</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Taluka</th>
+          ${includeVerifiedDate ? '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Verification Date</th>' : ""}
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div style="margin-top:30px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
+    </div>`;
+  window.print();
+}
+$("adminPrintVerifiedBtn").addEventListener("click", ()=>{
+  const records = filteredRecords().filter(r=>r.verificationStatus==="Verified");
+  if(!records.length){ showToast("No verified members to print.", true); return; }
+  printListSheet("Verified Members List", records, true);
+});
+$("adminPrintAllBtn").addEventListener("click", ()=>{
+  const all = getRecords();
+  if(!all.length){ showToast("No records to print.", true); return; }
+  printListSheet("All Membership Registrations", all, false);
+});
+
+/* ============================================================
+   SECTION 21: ADMIN ACTIVITY LOG
+============================================================ */
+const actionLabels = {
+  REGISTERED: "📝 Registered", VERIFIED: "✓ Verified", REVERTED: "↩ Reverted",
+  DELETED: "🗑 Deleted", CLEARED_ALL: "⚠ Cleared All Records"
+};
+function renderActivityLog(){
+  const log = getActivityLog().slice().reverse();
+  $("activityCountLabel").textContent = log.length + " action" + (log.length===1?"":"s") + " recorded";
+  const list = $("activityLogList");
+  if(!log.length){ list.innerHTML = '<div class="empty-state">No activity recorded yet.</div>'; return; }
+  list.innerHTML = log.slice(0,80).map(e=>{
+    const label = (actionLabels[e.actionType] || e.actionType) + (e.regNo && e.regNo !== "-" ? " — " + escapeHtml(e.regNo) : "");
+    const sub = e.teacherName && e.teacherName !== "-" ? escapeHtml(e.teacherName) : "";
+    return `<div class="activity-item"><span class="a-label">${label}${sub ? " · " + sub : ""}</span><span class="a-time">${new Date(e.dateTime).toLocaleString()}</span></div>`;
+  }).join("");
+}
+$("activityToggle").addEventListener("click", toggleActivity);
+$("activityToggle").addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleActivity(); } });
+function toggleActivity(){
+  const open = !$("activityPanel").classList.contains("open");
+  $("activityPanel").classList.toggle("open", open);
+  $("activityToggle").classList.toggle("open", open);
+  $("activityToggle").setAttribute("aria-expanded", String(open));
+}
+
+/* ============================================================
+   GLOBAL ERROR GUARD (section 23)
+============================================================ */
+window.addEventListener("error", function(e){ console.error("YTA app error:", e.error || e.message); });
+
+/* ============================================================
+   BOOT
+============================================================ */
+applyConfig();
+goToStep(1);
+tryResumeAdminSession();
+
+})();
+</script>
+</body>
+</html>
