@@ -487,7 +487,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   <div class="modal">
     <div class="admin-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
     <h3>🔐 Administrator Login</h3>
-    <p>Sign in with your YTA administrator account. Sign in with your YTA administrator account created in Supabase Authentication. Each authorized administrator should use their own account.</p>
+    <p>Sign in with your YTA administrator account, created in Supabase Authentication. Each authorized administrator should use their own account.</p>
     <div class="admin-login-field"><label for="adminEmail">Admin Email</label><input type="email" id="adminEmail" autocomplete="username" placeholder="admin@example.com"></div>
     <div class="admin-login-field"><label for="adminPassword">Password</label><input type="password" id="adminPassword" autocomplete="current-password" placeholder="Enter your password"></div>
     <div class="admin-error" id="adminLoginError">⚠ Incorrect email or password.</div>
@@ -495,7 +495,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <button type="button" class="btn btn-ghost" id="cancelAdminLogin">Cancel</button>
       <button type="button" class="btn btn-primary" id="submitAdminLogin"><span id="adminLoginBtnLabel">Login</span></button>
     </div>
-    <div class="security-note">For genuine multi-admin, multi-device security, records are stored in Firebase behind sign-in-only access rules — teachers can submit a registration but cannot read, edit, or delete any record. Only signed-in administrators can view, verify, or export the database.</div>
+    <div class="security-note">For genuine multi-admin, multi-device security, records are stored in Supabase behind row-level security policies — teachers can submit a registration but cannot read, edit, or delete any record. Only signed-in administrators can view, verify, or export the database.</div>
   </div>
 </div>
 
@@ -883,7 +883,7 @@ function mapMember(row){
     verifiedTime: verifiedTime || null,
     verifiedBy: row.verified_by || null,
     recipients: Array.isArray(row.whatsapp_recipients) ? row.whatsapp_recipients : [],
-    sentRecipients: [],
+    sentRecipients: Array.isArray(row.whatsapp_recipients) ? row.whatsapp_recipients : [],
     whatsappSentAt: row.whatsapp_submitted_at || null
   };
 }
@@ -1105,8 +1105,20 @@ $("openWhatsappQueueBtn").addEventListener("click", async ()=>{
   const nowIso = new Date().toISOString();
   currentRecord.sentRecipients.push({ name:r.name, number:r.number, sentAt: nowIso });
   currentRecord.whatsappSentAt = nowIso;
-  // WhatsApp metadata is intentionally not written with an anonymous UPDATE.
-  // The membership itself is already safely stored in the central database.
+  // Teachers are anonymous and cannot UPDATE memberships directly (RLS
+  // blocks it). This SECURITY DEFINER RPC lets an anonymous caller append
+  // ONLY to whatsapp_recipients/whatsapp_submitted_at for this one row,
+  // matched by registration_number — it cannot touch anything else.
+  if(supabaseReady && currentRecord.regNo){
+    try{
+      const {error: rpcError} = await supabase.rpc("record_yta_whatsapp_send", {
+        p_registration_number: currentRecord.regNo,
+        p_recipient_name: r.name,
+        p_recipient_number: r.number
+      });
+      if(rpcError) console.warn("Could not record WhatsApp send history:", rpcError.message);
+    }catch(e){ console.warn("Could not record WhatsApp send history:", e.message); }
+  }
 
   $("openWhatsappQueueBtn").disabled = true;
   if(sendQueueIndex < sendQueue.length - 1){
