@@ -487,7 +487,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   <div class="modal">
     <div class="admin-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
     <h3>🔐 Administrator Login</h3>
-    <p>Sign in with your YTA administrator account. Admin accounts are created by your organization in the Firebase console — there is no shared password.</p>
+    <p>Sign in with your YTA administrator account. Admin accounts are created in Supabase Authentication — there is no shared password.</p>
     <div class="admin-login-field"><label for="adminEmail">Admin Email</label><input type="email" id="adminEmail" autocomplete="username" placeholder="admin@example.com"></div>
     <div class="admin-login-field"><label for="adminPassword">Password</label><input type="password" id="adminPassword" autocomplete="current-password" placeholder="Enter your password"></div>
     <div class="admin-error" id="adminLoginError">⚠ Incorrect email or password.</div>
@@ -495,7 +495,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <button type="button" class="btn btn-ghost" id="cancelAdminLogin">Cancel</button>
       <button type="button" class="btn btn-primary" id="submitAdminLogin"><span id="adminLoginBtnLabel">Login</span></button>
     </div>
-    <div class="security-note">For genuine multi-admin, multi-device security, records are stored in Firebase behind sign-in-only access rules — teachers can submit a registration but cannot read, edit, or delete any record. Only signed-in administrators can view, verify, or export the database.</div>
+    <div class="security-note">For genuine multi-admin, multi-device security, records are stored in Supabase behind database-level RLS access rules — teachers can submit a registration but cannot read, edit, or delete any record. Only signed-in administrators can view, verify, or export the database.</div>
   </div>
 </div>
 
@@ -673,8 +673,8 @@ const WHATSAPP_NUMBERS = [
    NEVER paste a service_role/secret key into this HTML file.
 ============================================================ */
 const SUPABASE_CONFIG = {
-  url: "https://vrxcdxbpkzeuibnablxv.supabase.co",
-  anonKey: "sb_publishable_mrcUUch4bboQwOe9OqrcgQ_FCUpLnOq"
+  url: "https://odpzipgdwpqgoddtkvve.supabase.co",
+  anonKey: "sb_publishable_uI6fpg3rQxfJJJemjooG8A_hRbrz17Y"
 };
 const ADMIN_SESSION_MINUTES = 15;
 
@@ -858,112 +858,117 @@ function fillPreview(){
 
 /* ============================================================
    SECTION 5: CENTRAL DATABASE — SUPABASE DATA LAYER
-   Tables created by the YTA Supabase setup:
-   members, admins, activity_logs, whatsapp_recipients, settings
+   Central source of truth: public.memberships
 ============================================================ */
-function formatRegNo(n){ return "YTA-NF-" + String(n).padStart(4,"0"); }
-
+function formatRegNo(value){
+  const text = String(value || "");
+  return /^YTA-NF-/i.test(text) ? text : "YTA-NF-" + text.padStart(4,"0");
+}
 function mapMember(row){
   if(!row) return null;
-  const verifiedAt = row.verified_at || null;
-  const createdAt = row.created_at || row.date_time || new Date().toISOString();
+  const createdAt = row.created_at || new Date().toISOString();
   return {
     id: row.id,
-    regNo: row.registration_no || row.reg_no || row.regNo,
+    regNo: row.registration_number || "",
     dateTime: createdAt,
-    fullName: row.full_name || row.fullName || "",
-    fatherName: row.father_name || row.fatherName || "",
-    schoolName: row.school_name || row.schoolName || "",
-    semisCode: row.semis_code || row.semisCode || "",
+    fullName: row.full_name || "",
+    fatherName: row.father_name || "",
+    schoolName: row.school_name || "",
+    semisCode: row.semis_code || "",
     taluka: row.taluka || "",
-    whatsappNumber: row.whatsapp_number || row.whatsappNumber || "",
-    verificationStatus: row.verification_status || row.verificationStatus || "Pending",
-    verifiedDate: row.verified_date || (verifiedAt ? new Date(verifiedAt).toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}) : null),
-    verifiedTime: row.verified_time || (verifiedAt ? new Date(verifiedAt).toLocaleTimeString() : null),
-    verifiedBy: row.verified_by || row.verifiedBy || null,
-    recipients: row.recipients || [],
-    sentRecipients: row.sent_recipients || row.sentRecipients || [],
-    whatsappSentAt: row.whatsapp_sent_at || row.whatsappSentAt || null
+    whatsappNumber: row.whatsapp_number || "",
+    verificationStatus: String(row.verification_status || "pending").toLowerCase() === "verified" ? "Verified" : "Pending",
+    verifiedDate: row.verification_date ? new Date(row.verification_date).toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}) : null,
+    verifiedTime: row.verification_time ? String(row.verification_time).slice(0,8) : null,
+    verifiedBy: row.verified_by || null,
+    recipients: row.whatsapp_recipients || [],
+    sentRecipients: [],
+    whatsappSentAt: row.whatsapp_submitted_at || null
   };
 }
-
 function memberPayload(d, regNo){
   return {
-    registration_no: regNo,
+    registration_number: regNo,
     full_name: d.fullName,
     father_name: d.fatherName,
     whatsapp_number: "+" + d.whatsappNorm,
     school_name: d.schoolName,
     semis_code: d.semisCode,
     taluka: d.taluka,
-    verification_status: "Pending",
-    verified_at: null,
+    verification_status: "pending",
+    verification_date: null,
+    verification_time: null,
     verified_by: null,
-    recipients: [],
-    sent_recipients: [],
-    whatsapp_sent_at: null
+    whatsapp_recipients: [],
+    whatsapp_submitted_at: null
   };
 }
-
 async function getNextRegistrationNumber(){
-  // Preferred: atomic Postgres RPC created by the YTA database setup.
-  for(const fn of ["next_registration_number","next_yta_registration_number"]){
-    try{
-      const {data,error}=await supabase.rpc(fn);
-      if(!error && data !== null && data !== undefined){
-        const n=typeof data === "object" ? (data.value ?? data.next_number ?? data.registration_number) : data;
-        if(Number(n)>0) return Number(n);
-      }
-    }catch(e){}
-  }
-  // Safe-ish fallback if the SQL setup did not create the RPC: inspect the
-  // highest existing central registration number and add one.
-  const {data,error}=await supabase.from("members").select("registration_no").order("created_at",{ascending:false}).limit(1000);
+  const {data,error}=await supabase.rpc("next_yta_registration_number");
   if(error) throw error;
-  let max=0;
-  (data||[]).forEach(r=>{ const m=String(r.registration_no||"").match(/(\d+)$/); if(m) max=Math.max(max,parseInt(m[1],10)); });
-  return max+1;
+  if(!data) throw new Error("Registration number could not be generated by the central database.");
+  return formatRegNo(data);
 }
-
+async function findPossibleDuplicate(d){
+  const name = d.fullName;
+  const semis = d.semisCode;
+  const school = d.schoolName;
+  const wa = "+" + d.whatsappNorm;
+  const checks = await Promise.all([
+    supabase.from("memberships").select("registration_number").eq("semis_code",semis).eq("full_name",name).limit(1),
+    supabase.from("memberships").select("registration_number").eq("whatsapp_number",wa).limit(1),
+    supabase.from("memberships").select("registration_number").eq("full_name",name).eq("school_name",school).eq("semis_code",semis).limit(1)
+  ]);
+  for(const result of checks){
+    if(result.error) throw result.error;
+    if(result.data && result.data.length) return result.data[0].registration_number;
+  }
+  return null;
+}
 async function logActivity(actionType, regNo, teacherName, details={}){
-  if(!supabase) return;
+  if(!supabase || !currentAdmin) return;
   try{
-    await supabase.from("activity_logs").insert({
-      action_type: actionType,
-      registration_no: regNo,
+    await supabase.from("admin_activity_logs").insert({
+      admin_id: currentAdmin.id,
+      admin_name: currentAdmin.full_name || adminEmail || "YTA Admin",
+      action: actionType,
+      registration_number: regNo,
       teacher_name: teacherName,
-      admin_email: adminEmail || null,
-      details,
-      created_at: new Date().toISOString()
+      timestamp: new Date().toISOString()
     });
   }catch(e){ console.warn("Activity log write failed:", e.message); }
 }
 
-/* Confirm review -> create the record centrally, move to recipient step */
+/* Confirm review -> create the record centrally before success/WhatsApp. */
 $("confirmToStep4").addEventListener("click", async ()=>{
   if(!validateStep1()){ goToStep(1); showToast("Please complete personal information first.", true); return; }
   if(!validateStep2()){ goToStep(2); showToast("Please complete school information first.", true); return; }
-  if(!supabaseReady){ showToast("This app isn't connected to Supabase yet. Please add the public key in SUPABASE_CONFIG.", true); return; }
+  if(!supabaseReady){ showToast("Registration Could Not Be Submitted — please check your internet connection.", true); return; }
 
   if(!currentRecord){
     const btn = $("confirmToStep4");
     btn.disabled = true;
-    $("confirmBtnLabel").innerHTML = '<span class="spinner"></span> Saving...';
+    $("confirmBtnLabel").innerHTML = '<span class="spinner"></span> Saving to Central Database...';
     try{
-      const n = await getNextRegistrationNumber();
-      const regNo = formatRegNo(n);
+      if(!navigator.onLine) throw new Error("No Internet Connection. Your registration cannot be submitted until an internet connection is available.");
       const d = currentFormData();
+      const duplicate = await findPossibleDuplicate(d);
+      if(duplicate){
+        showToast("⚠ Possible existing membership: " + duplicate, true);
+        return;
+      }
+      const regNo = await getNextRegistrationNumber();
       const payload = memberPayload(d, regNo);
-      const {data,error} = await supabase.from("members").insert(payload).select("*").single();
+      const {data,error} = await supabase.from("memberships").insert(payload).select("*").single();
       if(error) throw error;
       currentRecord = mapMember(data);
-      await logActivity("REGISTERED", regNo, currentRecord.fullName);
-      $("pvRegNo").textContent = regNo; $("pvRegNo2").textContent = regNo;
+      $("pvRegNo").textContent = regNo;
+      $("pvRegNo2").textContent = regNo;
       renderRecipientSelector();
       goToStep(4);
     }catch(e){
       console.error(e);
-      showToast("Could not save your registration: " + (e.message || "check your internet connection."), true);
+      showToast("❌ Registration Could Not Be Submitted — " + (e.message || "Please check your internet connection and try again."), true);
     }finally{
       btn.disabled = false;
       $("confirmBtnLabel").textContent = "Confirm & Continue";
@@ -1015,7 +1020,7 @@ $("toStep5").addEventListener("click", async ()=>{
   const recipients = recipientListCache.length ? recipientListCache : WHATSAPP_NUMBERS;
   selectedRecipients = checked.map(inp => recipients[parseInt(inp.value,10)]);
   currentRecord.recipients = selectedRecipients;
-  try{ const {error}=await supabase.from("members").update({recipients:selectedRecipients}).eq("id",currentRecord.id); if(error) throw error; }
+  try{ const {error}=await supabase.from("memberships").update({whatsapp_recipients:selectedRecipients}).eq("id",currentRecord.id); if(error) throw error; }
   catch(e){ console.warn("Could not save recipient selection:", e.message); }
   startSendQueue();
   goToStep(5);
@@ -1095,7 +1100,7 @@ $("openWhatsappQueueBtn").addEventListener("click", async ()=>{
   currentRecord.sentRecipients.push({ name:r.name, number:r.number, sentAt: nowIso });
   currentRecord.whatsappSentAt = nowIso;
   try{
-    const {error}=await supabase.from("members").update({sent_recipients:currentRecord.sentRecipients, whatsapp_sent_at:nowIso}).eq("id",currentRecord.id);
+    const {error}=await supabase.from("memberships").update({whatsapp_recipients:currentRecord.recipients, whatsapp_submitted_at:nowIso}).eq("id",currentRecord.id);
     if(error) throw error;
   }catch(e){ console.warn("Could not record WhatsApp send history:", e.message); }
 
@@ -1190,13 +1195,13 @@ $("adminPassword").addEventListener("keydown", e=>{ if(e.key==="Enter") $("submi
 
 async function loadAdminProfile(user){
   if(!user) return false;
-  const {data,error}=await supabase.from("admins").select("*").eq("user_id",user.id).maybeSingle();
+  const {data,error}=await supabase.from("admin_profiles").select("*").eq("id",user.id).maybeSingle();
   if(error){ console.error(error); showToast("Could not load administrator profile: " + error.message, true); return false; }
   if(!data){ showToast("This account is authenticated but is not registered as a YTA administrator.", true); await supabase.auth.signOut(); return false; }
-  if(data.is_active === false || data.active === false){ showToast("This administrator account is inactive.", true); await supabase.auth.signOut(); return false; }
+  if(data.is_active === false){ showToast("This administrator account is inactive.", true); await supabase.auth.signOut(); return false; }
   currentAdmin=data;
   adminRole=data.role || "District Admin";
-  adminEmail=user.email || data.email || "";
+  adminEmail=user.email || "";
   const roleLabel = String(adminRole).replace(/_/g," ");
   $("adminTagLine").textContent = "YTA · " + CONFIG.district + " · " + roleLabel;
   return true;
@@ -1278,12 +1283,12 @@ function subscribeAdminData(){
   $("connStatusPill").innerHTML="<span></span>Connecting...";
 
   const membersChannel=supabase.channel("yta-members-live")
-    .on("postgres_changes",{event:"*",schema:"public",table:"members"},()=>loadMembers())
+    .on("postgres_changes",{event:"*",schema:"public",table:"memberships"},()=>loadMembers())
     .subscribe(status=>{ if(status==="SUBSCRIBED") setConnectionStatus(true,"Live — synced across all devices"); });
   unsubRegistrations=membersChannel;
 
   const activityChannel=supabase.channel("yta-activity-live")
-    .on("postgres_changes",{event:"*",schema:"public",table:"activity_logs"},()=>loadActivity())
+    .on("postgres_changes",{event:"*",schema:"public",table:"admin_activity_logs"},()=>loadActivity())
     .subscribe();
   unsubActivity=activityChannel;
 
@@ -1296,7 +1301,7 @@ function setConnectionStatus(live,text){
 }
 async function loadMembers(){
   try{
-    const {data,error}=await supabase.from("members").select("*").order("created_at",{ascending:false});
+    const {data,error}=await supabase.from("memberships").select("*").order("created_at",{ascending:false});
     if(error) throw error;
     recordsCache=(data||[]).map(mapMember);
     setConnectionStatus(true,"Live — synced across all devices");
@@ -1308,9 +1313,9 @@ async function loadMembers(){
 }
 async function loadActivity(){
   try{
-    const {data,error}=await supabase.from("activity_logs").select("*").order("created_at",{ascending:false}).limit(200);
+    const {data,error}=await supabase.from("admin_activity_logs").select("*").order("timestamp",{ascending:false}).limit(200);
     if(error) throw error;
-    activityCache=(data||[]).map(e=>({actionType:e.action_type,regNo:e.registration_no,teacherName:e.teacher_name,dateTime:e.created_at,adminEmail:e.admin_email,details:e.details}));
+    activityCache=(data||[]).map(e=>({actionType:e.action || e.action_type,regNo:e.registration_number || e.registration_no,teacherName:e.teacher_name,dateTime:e.timestamp || e.created_at,adminEmail:e.admin_name || e.admin_email,details:e.details}));
     renderActivityLog();
   }catch(e){ console.warn("Activity log load failed:",e.message); }
 }
@@ -1321,7 +1326,7 @@ function filteredRecords(){
   const status = $("adminStatusFilter").value;
   const taluka = $("adminFilterTaluka").value;
   const role=String(adminRole||"").toLowerCase().replace(/_/g," ");
-  const scopedTaluka = role.includes("taluka") && currentAdmin && (currentAdmin.taluka || currentAdmin.taluka_name) ? (currentAdmin.taluka || currentAdmin.taluka_name) : "";
+  const scopedTaluka = role.includes("taluka") && currentAdmin && currentAdmin.assigned_taluka ? currentAdmin.assigned_taluka : "";
   return recordsCache.filter(function(r){
     const matchesScope = !scopedTaluka || r.taluka === scopedTaluka;
     const matchesQ = !q ||
@@ -1476,10 +1481,9 @@ $("printFromView").addEventListener("click", ()=>{
 
 function canPerform(action){
   const role=String(adminRole||"").toLowerCase().replace(/_/g," ");
-  if(role.includes("super")) return true;
-  if(action==="delete" || action==="clear") return role.includes("district");
-  if(action==="verify") return role.includes("district") || role.includes("taluka");
-  return true;
+  if(action === "delete" || action === "clear") return role === "super admin";
+  if(action === "verify") return role === "super admin" || role === "district admin" || role === "taluka admin";
+  return role === "super admin" || role === "district admin" || role === "taluka admin";
 }
 
 /* ============================================================
@@ -1500,7 +1504,7 @@ $("confirmVerify").addEventListener("click", async ()=>{
   const target = recordsCache.find(r=>r.id===id);
   const now = new Date();
   try{
-    const {error}=await supabase.from("members").update({verification_status:"Verified",verified_at:new Date().toISOString(),verified_by:adminEmail||"Administrator"}).eq("id",id);
+    const {error}=await supabase.from("memberships").update({verification_status:"verified",verification_date:new Date().toISOString().slice(0,10),verification_time:new Date().toTimeString().slice(0,8),verified_by:currentAdmin.id}).eq("id",id);
     if(error) throw error;
     if(target) await logActivity("VERIFIED", target.regNo, target.fullName);
     showToast("Teacher marked as verified.");
@@ -1524,7 +1528,7 @@ $("confirmRevert").addEventListener("click", async ()=>{
   const id = pendingRevertRegNo;
   const target = recordsCache.find(r=>r.id===id);
   try{
-    const {error}=await supabase.from("members").update({verification_status:"Pending",verified_at:null,verified_by:null}).eq("id",id);
+    const {error}=await supabase.from("memberships").update({verification_status:"pending",verification_date:null,verification_time:null,verified_by:null}).eq("id",id);
     if(error) throw error;
     if(target) await logActivity("REVERTED", target.regNo, target.fullName);
     showToast("Verification reverted — moved back to Pending.");
@@ -1551,7 +1555,7 @@ $("confirmDelete").addEventListener("click", async ()=>{
   const id = pendingDeleteRegNo;
   const target = recordsCache.find(r=>r.id===id);
   try{
-    const {error}=await supabase.from("members").delete().eq("id",id);
+    const {error}=await supabase.from("memberships").delete().eq("id",id);
     if(error) throw error;
     if(target) await logActivity("DELETED", target.regNo, target.fullName);
     showToast("Registration " + (target ? target.regNo : "") + " deleted.");
@@ -1577,7 +1581,7 @@ $("confirmClearAll").addEventListener("click", async ()=>{
   const btn = $("confirmClearAll");
   btn.disabled = true; btn.textContent = "Deleting...";
   try{
-    const {error}=await supabase.from("members").delete().neq("id","00000000-0000-0000-0000-000000000000");
+    const {error}=await supabase.from("memberships").delete().neq("id","00000000-0000-0000-0000-000000000000");
     if(error) throw error;
     await logActivity("CLEARED_ALL", "-", "-");
     showToast("All registration records have been deleted.");
