@@ -882,6 +882,7 @@ function mapMember(row){
     verifiedDate: verifiedDate ? new Date(verifiedDate + "T00:00:00").toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}) : null,
     verifiedTime: verifiedTime || null,
     verifiedBy: row.verified_by || null,
+    verifiedByName: row.verified_by_name || null,
     recipients: Array.isArray(row.whatsapp_recipients) ? row.whatsapp_recipients : [],
     sentRecipients: Array.isArray(row.whatsapp_recipients) ? row.whatsapp_recipients : [],
     whatsappSentAt: row.whatsapp_submitted_at || null
@@ -1163,7 +1164,7 @@ function statusLabel(r){ return r.verificationStatus === "Verified" ? "Verified"
 function buildPrintSheet(record){
   const verifiedBlock = record.verificationStatus === "Verified"
     ? `<tr><td style="padding:8px 0;color:#555;">Verified Date</td><td style="padding:8px 0;">${escapeHtml(record.verifiedDate||"")} ${escapeHtml(record.verifiedTime||"")}</td></tr>
-       <tr><td style="padding:8px 0;color:#555;">Verified By</td><td style="padding:8px 0;">${escapeHtml(record.verifiedBy||"")}</td></tr>` : "";
+       <tr><td style="padding:8px 0;color:#555;">Verified By</td><td style="padding:8px 0;">${escapeHtml(record.verifiedByName||record.verifiedBy||"")}</td></tr>` : "";
   return `
     <div style="max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
@@ -1444,7 +1445,7 @@ function verifiedCardHtml(r){
       SEMIS: ${escapeHtml(r.semisCode)} · Taluka: ${escapeHtml(r.taluka)}<br>
       WhatsApp: ${escapeHtml(r.whatsappNumber)}
     </div>
-    <div class="mc-verify-meta">🟢 Verified on ${escapeHtml(r.verifiedDate||"")} at ${escapeHtml(r.verifiedTime||"")}<br>Verified by: ${escapeHtml(r.verifiedBy||"")}</div>
+    <div class="mc-verify-meta">🟢 Verified on ${escapeHtml(r.verifiedDate||"")} at ${escapeHtml(r.verifiedTime||"")}<br>Verified by: ${escapeHtml(r.verifiedByName||r.verifiedBy||"")}</div>
     <div class="mc-actions">
       <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
       <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
@@ -1481,7 +1482,7 @@ function openViewRecord(r){
     ["School", r.schoolName], ["SEMIS Code", r.semisCode], ["Taluka", r.taluka],
     ["WhatsApp Number", r.whatsappNumber], ["Verification Status", statusLabel(r)]
   ];
-  if(r.verificationStatus === "Verified") rows.push(["Verified Date", r.verifiedDate + " " + r.verifiedTime], ["Verified By", r.verifiedBy]);
+  if(r.verificationStatus === "Verified") rows.push(["Verified Date", r.verifiedDate + " " + r.verifiedTime], ["Verified By", r.verifiedByName||r.verifiedBy]);
   if(r.sentRecipients && r.sentRecipients.length) rows.push(["WhatsApp Sent To", r.sentRecipients.map(x=>x.name).join(", ")]);
   $("viewRecordRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
   $("viewRecordOverlay").dataset.id = r.id;
@@ -1521,7 +1522,7 @@ $("confirmVerify").addEventListener("click", async ()=>{
   const target = recordsCache.find(r=>r.id===id);
   const now = new Date();
   try{
-    const {error}=await supabase.from("memberships").update({verification_status:"verified",verification_date:now.toISOString().slice(0,10),verification_time:now.toTimeString().slice(0,8),verified_by:currentAdmin.id,updated_at:now.toISOString()}).eq("id",id);
+    const {error}=await supabase.from("memberships").update({verification_status:"verified",verification_date:now.toISOString().slice(0,10),verification_time:now.toTimeString().slice(0,8),verified_by:currentAdmin.id,verified_by_name:(currentAdmin.full_name||adminEmail||"Administrator"),updated_at:now.toISOString()}).eq("id",id);
     if(error) throw error;
     if(target) await logActivity("VERIFIED", target.regNo, target.fullName);
     showToast("Teacher marked as verified.");
@@ -1633,7 +1634,7 @@ $("adminExportVerifiedBtn").addEventListener("click", ()=>{
   const all = recordsCache.filter(r=>r.verificationStatus==="Verified");
   if(!all.length){ showToast("No verified members to export.", true); return; }
   const headers = ["Registration No.","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status","Verification Date","Verification Time","Verified By"];
-  const rows = all.map(r=>[r.regNo, r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Verified", r.verifiedDate, r.verifiedTime, r.verifiedBy]);
+  const rows = all.map(r=>[r.regNo, r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Verified", r.verifiedDate, r.verifiedTime, r.verifiedByName||r.verifiedBy]);
   downloadCsv("YTA_NF_Verified_Members.csv", headers, rows);
   showToast("Verified members exported.");
 });
