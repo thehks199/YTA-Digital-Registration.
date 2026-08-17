@@ -4,11 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>YTA — Digital Membership &amp; Election Management System</title>
+<link rel="icon" type="image/jpeg" href="assets/yta-logo.jpg">
+<meta name="description" content="Young Teachers Alliance — District Naushahro Feroze. Digital membership registration for the Taluka Election.">
+<meta property="og:title" content="YTA — Digital Membership &amp; Election Management System">
+<meta property="og:description" content="Young Teachers Alliance — District Naushahro Feroze. Register your YTA membership for the Taluka Election.">
+<meta property="og:image" content="https://thehks199.github.io/YTA-Digital-Registration./assets/yta-logo.jpg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thehks199.github.io/YTA-Digital-Registration./">
+<meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <!-- Supabase JS client -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- QR code generator (for registration slip verification QR) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<!-- PDF export -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<!-- Chart.js (registration trend chart) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 /* =========================================================
    SECTION 3: CSS — DESIGN TOKENS (unchanged from prior version)
@@ -522,6 +537,11 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     </div>
 
     <div class="card" style="padding:16px;">
+      <h2 style="font-size:14.5px; margin-bottom:12px;">Registration Trend — Last 14 Days</h2>
+      <div style="position:relative; height:180px;"><canvas id="trendChartCanvas"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:16px;">
       <h2 style="font-size:14.5px;">Taluka-wise Summary</h2>
       <div class="taluka-table-wrap">
         <table class="taluka-table">
@@ -551,6 +571,10 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
         <button type="button" class="btn btn-ghost btn-sm" id="adminExportPendingBtn">Export Pending Members</button>
       </div>
       <div class="admin-actions-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportAllPdfBtn">📄 PDF — All Records</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportVerifiedPdfBtn">📄 PDF — Verified</button>
+      </div>
+      <div class="admin-actions-row">
         <button type="button" class="btn btn-ghost btn-sm" id="adminPrintVerifiedBtn">Print Verified List</button>
         <button type="button" class="btn btn-ghost btn-sm" id="adminPrintAllBtn">Print All Records</button>
         <button type="button" class="btn btn-danger-outline btn-sm" id="adminClearAllBtn">Clear All Records</button>
@@ -558,6 +582,10 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     </div>
 
     <div class="admin-section-head"><h2>🟡 Pending Verification</h2><span class="count-badge" id="pendingCountBadge">0</span></div>
+    <div class="admin-actions-row no-print" style="margin-bottom:8px;">
+      <button type="button" class="btn btn-ghost btn-sm" id="selectAllPendingBtn">☑ Select All</button>
+      <button type="button" class="btn btn-primary btn-sm" id="bulkVerifyBtn" disabled>✓ Verify Selected (<span id="bulkVerifyCount">0</span>)</button>
+    </div>
     <div id="pendingList"></div>
 
     <div class="admin-section-head"><h2>🟢 Verified Members</h2><span class="count-badge" id="verifiedCountBadge">0</span></div>
@@ -642,6 +670,25 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 
 <div id="printSheet"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- PUBLIC VERIFICATION STATUS PAGE (shown when URL has ?verify=REGNO) -->
+<div id="verifyStatusPage" class="hidden" style="min-height:100vh; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div class="card" style="max-width:380px; width:100%; text-align:center;">
+    <div class="brand-mark" aria-hidden="true" style="width:56px; height:56px; margin:0 auto 14px;"><img src="assets/yta-logo.jpg" alt="YTA Logo"></div>
+    <h2 style="margin:0 0 4px;">Registration Status</h2>
+    <p class="sub" id="verifyRegNoLabel" style="margin-bottom:18px;">—</p>
+    <div id="verifyStatusLoading">
+      <div class="spinner" style="border-color:rgba(14,59,92,0.25); border-top-color:var(--deep-blue);"></div>
+      <p style="font-size:12.5px; color:#7a8983; margin-top:10px;">Checking…</p>
+    </div>
+    <div id="verifyStatusResult" class="hidden">
+      <div class="status-pill" id="verifyStatusPill" style="font-size:13px; padding:8px 16px; margin-bottom:12px;"><span></span><span id="verifyStatusText">—</span></div>
+      <div style="font-size:16px; font-weight:700; color:var(--deep-blue-2);" id="verifyStatusName">—</div>
+    </div>
+    <div id="verifyStatusNotFound" class="hidden" style="font-size:13px; color:var(--danger);">No registration found with this number.</div>
+    <button type="button" class="btn btn-ghost" style="margin-top:22px;" id="verifyStatusBackBtn">Back to Registration Form</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -1163,10 +1210,23 @@ $("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle
    SECTION 10: PRINT
 ============================================================ */
 function statusLabel(r){ return r.verificationStatus === "Verified" ? "Verified" : "Pending Biometric Verification"; }
-function buildPrintSheet(record){
+const VERIFY_BASE_URL = "https://thehks199.github.io/YTA-Digital-Registration./";
+async function buildQrDataUrl(regNo){
+  try{
+    if(!window.QRCode || !regNo) return "";
+    const url = VERIFY_BASE_URL + "?verify=" + encodeURIComponent(regNo);
+    return await QRCode.toDataURL(url, {width:140, margin:1, color:{dark:"#0E3B5C", light:"#FFFFFF"}});
+  }catch(e){ console.warn("QR generation failed:", e.message); return ""; }
+}
+async function buildPrintSheet(record){
   const verifiedBlock = record.verificationStatus === "Verified"
     ? `<tr><td style="padding:8px 0;color:#555;">Verified Date</td><td style="padding:8px 0;">${escapeHtml(record.verifiedDate||"")} ${escapeHtml(record.verifiedTime||"")}</td></tr>
        <tr><td style="padding:8px 0;color:#555;">Verified By</td><td style="padding:8px 0;">${escapeHtml(record.verifiedByName||record.verifiedBy||"")}</td></tr>` : "";
+  const qrDataUrl = await buildQrDataUrl(record.regNo);
+  const qrBlock = qrDataUrl ? `<div style="text-align:center;margin-top:24px;">
+        <img src="${qrDataUrl}" alt="Verification QR Code" style="width:100px;height:100px;">
+        <div style="font-size:10px;color:#888;margin-top:4px;">Scan to verify this registration</div>
+      </div>` : "";
   return `
     <div style="max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
@@ -1191,12 +1251,13 @@ function buildPrintSheet(record){
         <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Teacher Signature</div>
         <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Verification / YTA Official</div>
       </div>
-      <div style="margin-top:40px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
+      ${qrBlock}
+      <div style="margin-top:24px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
     </div>`;
 }
-$("printBtn").addEventListener("click", ()=>{
+$("printBtn").addEventListener("click", async ()=>{
   if(!currentRecord){ showToast("Nothing to print yet.", true); return; }
-  $("printSheet").innerHTML = buildPrintSheet(currentRecord);
+  $("printSheet").innerHTML = await buildPrintSheet(currentRecord);
   window.print();
 });
 
@@ -1380,7 +1441,34 @@ function renderAdminDashboard(){
     return `<tr><td>${escapeHtml(t)}</td><td class="tnum">${c.total}</td><td class="tnum">${c.pending}</td><td class="tnum">${c.verified}</td></tr>`;
   }).join("");
 
+  renderTrendChart(all);
   renderAdminLists();
+}
+
+let trendChartInstance = null;
+function renderTrendChart(all){
+  if(!window.Chart) return;
+  const days = [];
+  const counts = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  for(let i=13;i>=0;i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    days.push(d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}));
+    const key = d.toDateString();
+    counts.push(all.filter(function(r){ return new Date(r.dateTime).toDateString() === key; }).length);
+  }
+  const ctx = document.getElementById("trendChartCanvas");
+  if(!ctx) return;
+  if(trendChartInstance) trendChartInstance.destroy();
+  trendChartInstance = new Chart(ctx, {
+    type: "line",
+    data: { labels: days, datasets: [{ label:"Registrations", data: counts, borderColor:"#146B47", backgroundColor:"rgba(20,107,71,0.12)", fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:"#146B47" }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, precision:0 } }, x:{ ticks:{ font:{size:10} } } }
+    }
+  });
 }
 
 function renderAdminLists(){
@@ -1403,6 +1491,11 @@ function renderAdminLists(){
   $("pendingList").innerHTML = pending.length ? pending.map(pendingCardHtml).join("") : '<div class="empty-state">No pending registrations found.</div>';
   $("verifiedList").innerHTML = verified.length ? verified.map(verifiedCardHtml).join("") : '<div class="empty-state">No verified members found.</div>';
   wireCardActions();
+  // Bulk-verify selections only persist for records still visible in the pending list
+  const visibleIds = new Set(pending.map(r=>r.id));
+  bulkSelectedIds.forEach(id=>{ if(!visibleIds.has(id)) bulkSelectedIds.delete(id); });
+  wireBulkSelectCheckboxes();
+  updateBulkVerifyUI();
 
   const taluka = $("adminFilterTaluka").value;
   if(taluka){
@@ -1418,7 +1511,10 @@ function pendingCardHtml(r){
   return `
   <div class="member-card" data-id="${escapeHtml(r.id)}">
     <div class="mc-top">
-      <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <input type="checkbox" class="bulk-select-cb no-print" data-id="${escapeHtml(r.id)}" style="width:18px; height:18px; margin-top:3px; accent-color:var(--emerald); flex:0 0 auto;" aria-label="Select for bulk verification">
+        <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      </div>
       <span class="status-pill pending"><span></span>Pending</span>
     </div>
     <div class="mc-meta">
@@ -1469,13 +1565,69 @@ function wireCardActions(){
     if(verifyBtn) verifyBtn.addEventListener("click", ()=> openVerifyModal(rec()));
     if(revertBtn) revertBtn.addEventListener("click", ()=> openRevertModal(rec()));
     if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
-    if(printBtn) printBtn.addEventListener("click", ()=>{ $("printSheet").innerHTML = buildPrintSheet(rec()); window.print(); });
+    if(printBtn) printBtn.addEventListener("click", async ()=>{ $("printSheet").innerHTML = await buildPrintSheet(rec()); window.print(); });
     if(delBtn) delBtn.addEventListener("click", ()=> openDeleteModal(rec()));
   });
 }
 $("adminSearch").addEventListener("input", renderAdminLists);
 $("adminStatusFilter").addEventListener("change", renderAdminLists);
 $("adminFilterTaluka").addEventListener("change", renderAdminLists);
+
+/* ============================================================
+   BULK VERIFY
+============================================================ */
+let bulkSelectedIds = new Set();
+function updateBulkVerifyUI(){
+  const count = bulkSelectedIds.size;
+  $("bulkVerifyCount").textContent = count;
+  $("bulkVerifyBtn").disabled = count === 0;
+}
+function wireBulkSelectCheckboxes(){
+  document.querySelectorAll("#pendingList .bulk-select-cb").forEach(function(cb){
+    cb.checked = bulkSelectedIds.has(cb.dataset.id);
+    cb.addEventListener("change", function(){
+      if(cb.checked) bulkSelectedIds.add(cb.dataset.id); else bulkSelectedIds.delete(cb.dataset.id);
+      updateBulkVerifyUI();
+    });
+  });
+}
+$("selectAllPendingBtn").addEventListener("click", ()=>{
+  const boxes = document.querySelectorAll("#pendingList .bulk-select-cb");
+  const allSelected = boxes.length && Array.from(boxes).every(cb=>bulkSelectedIds.has(cb.dataset.id));
+  boxes.forEach(function(cb){
+    if(allSelected) bulkSelectedIds.delete(cb.dataset.id); else bulkSelectedIds.add(cb.dataset.id);
+    cb.checked = !allSelected;
+  });
+  updateBulkVerifyUI();
+});
+$("bulkVerifyBtn").addEventListener("click", async ()=>{
+  if(!bulkSelectedIds.size) return;
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to verify members.", true); return; }
+  const ids = Array.from(bulkSelectedIds);
+  const targets = recordsCache.filter(r=>ids.includes(r.id));
+  const btn = $("bulkVerifyBtn");
+  btn.disabled = true;
+  const now = new Date();
+  try{
+    const {error} = await supabase.from("memberships").update({
+      verification_status:"verified",
+      verification_date: now.toISOString().slice(0,10),
+      verification_time: now.toTimeString().slice(0,8),
+      verified_by: currentAdmin.id,
+      verified_by_name: (currentAdmin.full_name || adminEmail || "Administrator"),
+      updated_at: now.toISOString()
+    }).in("id", ids);
+    if(error) throw error;
+    for(const t of targets){ await logActivity("VERIFIED (bulk)", t.regNo, t.fullName); }
+    showToast(`${ids.length} teacher(s) marked as verified.`);
+    bulkSelectedIds.clear();
+    updateBulkVerifyUI();
+    await loadMembers();
+  }catch(e){
+    showToast("Bulk verification failed: " + e.message, true);
+    btn.disabled = false;
+  }
+});
 
 function openViewRecord(r){
   if(!r) return;
@@ -1492,10 +1644,10 @@ function openViewRecord(r){
   $("viewRecordOverlay").classList.remove("hidden");
 }
 $("closeViewRecord").addEventListener("click", ()=> $("viewRecordOverlay").classList.add("hidden"));
-$("printFromView").addEventListener("click", ()=>{
+$("printFromView").addEventListener("click", async ()=>{
   const r = recordsCache.find(x=>x.id === $("viewRecordOverlay").dataset.id);
   if(!r) return;
-  $("printSheet").innerHTML = buildPrintSheet(r);
+  $("printSheet").innerHTML = await buildPrintSheet(r);
   window.print();
 });
 
@@ -1650,6 +1802,54 @@ $("adminExportPendingBtn").addEventListener("click", ()=>{
   showToast("Pending members exported.");
 });
 
+function exportPdf(title, filename, records, columns){
+  if(!records.length){ showToast("No records to export.", true); return; }
+  if(!window.jspdf){ showToast("PDF library did not load. Check your internet connection.", true); return; }
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
+  doc.setFontSize(9);
+  doc.setTextColor(20,107,71);
+  doc.text("YOUNG TEACHERS ALLIANCE", 40, 34);
+  doc.setTextColor(85,85,85);
+  doc.text("District " + CONFIG.district, 40, 47);
+  doc.setFontSize(14);
+  doc.setTextColor(18,34,43);
+  doc.text(title, 40, 68);
+  doc.autoTable({
+    startY: 84,
+    head: [columns.map(c=>c.label)],
+    body: records.map(r=>columns.map(c=>String(c.value(r)||""))),
+    styles:{fontSize:8, cellPadding:5},
+    headStyles:{fillColor:[14,59,92], textColor:255},
+    alternateRowStyles:{fillColor:[246,245,240]},
+    margin:{left:40, right:40}
+  });
+  const pageCount = doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text("YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199", 40, doc.internal.pageSize.getHeight()-20);
+  }
+  doc.save(filename);
+}
+$("adminExportAllPdfBtn").addEventListener("click", ()=>{
+  const cols = [
+    {label:"Reg. No.", value:r=>r.regNo}, {label:"Name", value:r=>r.fullName},
+    {label:"Father's Name", value:r=>r.fatherName}, {label:"School", value:r=>r.schoolName},
+    {label:"SEMIS", value:r=>r.semisCode}, {label:"Taluka", value:r=>r.taluka},
+    {label:"WhatsApp", value:r=>r.whatsappNumber}, {label:"Status", value:r=>statusLabel(r)}
+  ];
+  exportPdf("All Membership Registrations", "YTA_NF_All_Records.pdf", recordsCache, cols);
+});
+$("adminExportVerifiedPdfBtn").addEventListener("click", ()=>{
+  const cols = [
+    {label:"Reg. No.", value:r=>r.regNo}, {label:"Name", value:r=>r.fullName},
+    {label:"School", value:r=>r.schoolName}, {label:"Taluka", value:r=>r.taluka},
+    {label:"Verified Date", value:r=>r.verifiedDate}, {label:"Verified By", value:r=>r.verifiedByName||r.verifiedBy}
+  ];
+  exportPdf("Verified Members List", "YTA_NF_Verified_Members.pdf", recordsCache.filter(r=>r.verificationStatus==="Verified"), cols);
+});
+
 function printListSheet(title, records, includeVerifiedDate){
   const rowsHtml = records.map(function(r,i){
     return `<tr>
@@ -1724,6 +1924,49 @@ function toggleActivity(){
 }
 
 /* ============================================================
+   PUBLIC VERIFICATION STATUS PAGE (?verify=REGNO in the URL)
+   Requires a Supabase RPC "yta_verify_lookup(p_reg_no text)" that
+   returns only full_name + verification_status for a given
+   registration number (see setup notes). Nothing else is exposed.
+============================================================ */
+async function checkVerifyStatusPage(){
+  const params = new URLSearchParams(window.location.search);
+  const regNo = params.get("verify");
+  if(!regNo) return false;
+  $("teacherApp").classList.add("hidden");
+  $("verifyStatusPage").classList.remove("hidden");
+  $("verifyRegNoLabel").textContent = regNo;
+  if(!supabaseReady){
+    $("verifyStatusLoading").classList.add("hidden");
+    $("verifyStatusNotFound").textContent = "Verification service is not available right now.";
+    $("verifyStatusNotFound").classList.remove("hidden");
+    return true;
+  }
+  try{
+    const {data,error} = await supabase.rpc("yta_verify_lookup", {p_reg_no: regNo});
+    if(error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    $("verifyStatusLoading").classList.add("hidden");
+    if(!row){
+      $("verifyStatusNotFound").classList.remove("hidden");
+      return true;
+    }
+    const isVerified = String(row.verification_status||"").toLowerCase()==="verified";
+    $("verifyStatusPill").classList.add(isVerified ? "verified" : "pending");
+    $("verifyStatusText").textContent = isVerified ? "Verified" : "Pending Biometric Verification";
+    $("verifyStatusName").textContent = row.full_name || "—";
+    $("verifyStatusResult").classList.remove("hidden");
+  }catch(e){
+    console.error(e);
+    $("verifyStatusLoading").classList.add("hidden");
+    $("verifyStatusNotFound").textContent = "Could not check status right now. Please try again later.";
+    $("verifyStatusNotFound").classList.remove("hidden");
+  }
+  return true;
+}
+$("verifyStatusBackBtn").addEventListener("click", ()=>{ window.location.href = window.location.pathname; });
+
+/* ============================================================
    GLOBAL ERROR GUARD
 ============================================================ */
 window.addEventListener("error", function(e){ console.error("YTA app error:", e.error || e.message); });
@@ -1731,9 +1974,13 @@ window.addEventListener("error", function(e){ console.error("YTA app error:", e.
 /* ============================================================
    BOOT
 ============================================================ */
-applyConfig();
-goToStep(1);
-loadWhatsappRecipients();
+checkVerifyStatusPage().then(function(isVerifyPage){
+  if(!isVerifyPage){
+    applyConfig();
+    goToStep(1);
+    loadWhatsappRecipients();
+  }
+});
 
 })();
 </script>
