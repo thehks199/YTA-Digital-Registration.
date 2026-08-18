@@ -320,7 +320,8 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .nomination-report-wrap{overflow-x:auto;}
 @media(max-width:560px){.nomination-stat-grid{grid-template-columns:1fr 1fr;}}
 .compact-name-cell{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
-.compact-name{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;background:#f7f9f6;border:1px solid var(--line);font-size:11.5px;font-weight:700;color:var(--deep-blue-2);}
+.compact-name{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;background:#f7f9f6;border:1px solid var(--line);font-size:11.5px;font-weight:700;color:var(--deep-blue-2);cursor:pointer;transition:background 0.15s,border-color 0.15s;}
+.compact-name:hover{background:var(--gold-2);border-color:var(--gold);}
 .processed-box{border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;margin-top:12px;background:#fbfcfa;}
 .processed-box h3{font-size:12px;margin:0 0 7px;color:var(--deep-blue-2);}
 .processed-scroll{max-height:120px;overflow:auto;}
@@ -399,19 +400,8 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 
 
 /* ADMIN RECORD DETAIL MODAL */
-.yta-detail-overlay{position:fixed;inset:0;background:rgba(8,30,43,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
-.yta-detail-modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 20px 70px rgba(0,0,0,.28)}
-.yta-detail-head{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;z-index:2}
-.yta-detail-head h3{margin:0;font-size:18px}
-.yta-detail-close{border:0;background:#f1f3ef;border-radius:50%;width:34px;height:34px;font-size:20px;cursor:pointer}
-.yta-detail-body{padding:16px 18px}
-.yta-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-.yta-detail-row{padding:10px 0;border-bottom:1px solid #edf0eb}
-.yta-detail-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#74817e;margin-bottom:3px}
-.yta-detail-value{font-size:14px;font-weight:650;word-break:break-word}
 .yta-click-name{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 .yta-click-name:hover{opacity:.72}
-@media(max-width:520px){.yta-detail-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -859,8 +849,8 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
           <button type="button" class="btn btn-primary btn-sm" id="adminRegistrationSearchBtn">🔎 Search</button>
         </div>
         <select id="adminStatusFilter">
+          <option value="pending" selected>Pending — Current List</option>
           <option value="all">All Records</option>
-          <option value="pending">Pending Verification</option>
           <option value="verified">Verified</option>
         </select>
       </div>
@@ -906,6 +896,12 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
         <span class="count-badge" id="nominationCountBadge">0</span>
       </div>
       <div id="newNominationAlert" class="new-nomination-alert">🔔 <span id="newNominationAlertText">New nomination received.</span></div>
+      <div id="duplicateAttemptAlert" class="new-nomination-alert" style="background:#fdeaea;border-color:#eeb3b0;color:var(--danger);">
+        ⚠️ <span id="duplicateAttemptAlertText">Duplicate nomination attempt(s) detected.</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="viewDuplicateAttemptsBtn" style="margin-left:8px;">View</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="dismissDuplicateAttemptsBtn" style="margin-left:4px;">Dismiss</button>
+      </div>
+      <div id="duplicateAttemptsList" class="hidden" style="margin-bottom:10px;"></div>
       <div class="admin-filters">
         <div class="search-btn-wrap">
           <input type="text" id="adminNominationSearch" placeholder="Search nomination: registration no. or name">
@@ -1053,6 +1049,16 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   </div>
 </div>
 
+<div class="modal-overlay hidden no-print" id="viewNominationOverlay">
+  <div class="modal">
+    <h3>Nomination Details</h3>
+    <div class="ticket-rows" id="viewNominationRows" style="margin-bottom:12px;"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="closeViewNomination">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="printSheet"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1128,6 +1134,8 @@ let activityCache = [];           // live copy of activity log, admin-only
 let unsubRegistrations = null;
 let unsubActivity = null;
 let unsubNominations = null;
+let unsubDuplicateAttempts = null;
+let duplicateAttemptsCache = [];
 let nominationsCache = [];
 let lastAdminActivityAt = Date.now();
 let supabaseReady = false;
@@ -1705,6 +1713,22 @@ function nominationFormValid(){
   return ok;
 }
 
+// Best-effort notification to admin when a teacher tries to submit a second
+// nomination. Anonymous (teacher-side) insert — failures here never block
+// the user-facing error message, they only affect whether the admin sees it.
+async function logDuplicateNominationAttempt(payload, existingPost){
+  if(!supabase) return;
+  try{
+    await supabase.from("duplicate_attempts").insert({
+      registration_number: payload.registration_number,
+      full_name: payload.full_name,
+      taluka: payload.taluka,
+      attempted_post: payload.post,
+      existing_post: existingPost || null
+    });
+  }catch(e){ console.warn("Duplicate-attempt log failed:", e.message); }
+}
+
 $("nominationForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const result=$("nominationResult");
@@ -1743,6 +1767,7 @@ $("nominationForm").addEventListener("submit",async e=>{
 
     if(existing && existing.length){
       const e=existing[0];
+      logDuplicateNominationAttempt(payload, e.post);
       throw new Error(
         'This Registration Number has already submitted a nomination for the post "'+
         (e.post||"—")+'". One person cannot submit nominations for two posts.'
@@ -1752,6 +1777,7 @@ $("nominationForm").addEventListener("submit",async e=>{
     const {error}=await supabase.from("nominations").insert(payload);
     if(error){
       if(error.code==="23505"){
+        logDuplicateNominationAttempt(payload, null);
         throw new Error("This Registration Number already has a nomination. A person can nominate for only one post.");
       }
       throw error;
@@ -1830,6 +1856,53 @@ function notifyAdminNewNomination(row){
   }
 }
 
+async function loadDuplicateAttempts(){
+  if(!supabaseReady) return;
+  try{
+    const {data,error}=await supabase.from("duplicate_attempts").select("*").order("created_at",{ascending:false});
+    if(error) throw error;
+    duplicateAttemptsCache = data||[];
+    if(duplicateAttemptsCache.length){
+      $("duplicateAttemptAlertText").textContent = duplicateAttemptsCache.length + " duplicate nomination attempt(s) detected.";
+      $("duplicateAttemptAlert").style.display="block";
+    } else {
+      $("duplicateAttemptAlert").style.display="none";
+      $("duplicateAttemptsList").classList.add("hidden");
+    }
+  }catch(e){
+    console.warn("Duplicate attempts load failed:", e.message);
+  }
+}
+$("viewDuplicateAttemptsBtn").addEventListener("click", ()=>{
+  const box = $("duplicateAttemptsList");
+  if(!box.classList.contains("hidden")){ box.classList.add("hidden"); return; }
+  box.innerHTML = duplicateAttemptsCache.map(a=>`
+    <div class="nomination-admin-card" style="border-left-color:var(--danger);">
+      <div class="nomination-admin-top">
+        <div style="font-weight:700;color:var(--deep-blue-2);">${escapeHtml(a.full_name||"—")}</div>
+        <span style="font-size:10.5px;color:#6b7a78;">${a.created_at?new Date(a.created_at).toLocaleString():""}</span>
+      </div>
+      <div class="nomination-admin-meta">
+        Registration: ${escapeHtml(a.registration_number||"—")} · Taluka: ${escapeHtml(a.taluka||"—")}<br>
+        Already nominated for: <b>${escapeHtml(a.existing_post||"—")}</b> — attempted second post: <b>${escapeHtml(a.attempted_post||"—")}</b>
+      </div>
+    </div>`).join("") || '<div class="empty-state">No duplicate attempts.</div>';
+  box.classList.remove("hidden");
+});
+$("dismissDuplicateAttemptsBtn").addEventListener("click", async ()=>{
+  if(!duplicateAttemptsCache.length) return;
+  try{
+    const {error} = await supabase.from("duplicate_attempts").delete().neq("id","00000000-0000-0000-0000-000000000000");
+    if(error) throw error;
+    duplicateAttemptsCache = [];
+    $("duplicateAttemptAlert").style.display="none";
+    $("duplicateAttemptsList").classList.add("hidden");
+    showToast("Duplicate attempt alerts cleared.");
+  }catch(e){
+    showToast("Could not clear alerts: " + e.message, true);
+  }
+});
+
 async function loadNominations(){
   if(!supabaseReady) return;
   try{
@@ -1898,14 +1971,35 @@ function renderAdminNominations(){
   const approved=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="approved");
   const rejected=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="rejected");
   $("approvedNominationNames").innerHTML=approved.length
-    ? approved.map(r=>`<span class="compact-name">✓ ${escapeHtml(r.full_name||"—")}</span>`).join("")
+    ? approved.map(r=>`<span class="compact-name" data-id="${escapeHtml(r.id)}">✓ ${escapeHtml(r.full_name||"—")}</span>`).join("")
     : '<span class="empty-state">No approved nominations yet.</span>';
   $("rejectedNominationNames").innerHTML=rejected.length
-    ? rejected.map(r=>`<span class="compact-name">✕ ${escapeHtml(r.full_name||"—")}</span>`).join("")
+    ? rejected.map(r=>`<span class="compact-name" data-id="${escapeHtml(r.id)}">✕ ${escapeHtml(r.full_name||"—")}</span>`).join("")
     : '<span class="empty-state">No rejected nominations yet.</span>';
+  [...document.querySelectorAll("#approvedNominationNames .compact-name"), ...document.querySelectorAll("#rejectedNominationNames .compact-name")].forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const nom = nominationsCache.find(x=>x.id === el.dataset.id);
+      if(nom) openViewNomination(nom);
+    });
+  });
 
   renderNominationStatistics();
 }
+function openViewNomination(r){
+  if(!r) return;
+  const rows = [
+    ["Nomination For (Post)", r.post], ["Status", (r.status||"pending")],
+    ["Full Name", r.full_name], ["Father's Name", r.father_name],
+    ["YTA Registration No.", r.registration_number], ["Taluka", r.taluka],
+    ["School", r.school_name], ["SEMIS Code", r.semis_code],
+    ["WhatsApp Number", r.whatsapp_number],
+    ["Submitted", r.created_at ? new Date(r.created_at).toLocaleString() : "—"]
+  ];
+  if(r.reviewed_at) rows.push(["Reviewed By", r.reviewed_by_name || r.reviewed_by || "—"], ["Reviewed At", new Date(r.reviewed_at).toLocaleString()]);
+  $("viewNominationRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v||"—")}</span></div>`).join("");
+  $("viewNominationOverlay").classList.remove("hidden");
+}
+$("closeViewNomination").addEventListener("click", ()=> $("viewNominationOverlay").classList.add("hidden"));
 function renderNominationStatistics(){
   const rows=nominationsCache||[];
   const count=s=>rows.filter(r=>String(r.status||"pending").toLowerCase()===s).length;
@@ -2179,9 +2273,15 @@ function subscribeAdminData(){
     .subscribe();
   unsubNominations=nominationsChannel;
 
+  const dupAttemptsChannel=supabase.channel("yta-dup-attempts-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"duplicate_attempts"},()=>loadDuplicateAttempts())
+    .subscribe();
+  unsubDuplicateAttempts=dupAttemptsChannel;
+
   loadMembers();
   loadActivity();
   loadNominations();
+  loadDuplicateAttempts();
 }
 function setConnectionStatus(live,text){
   $("connStatusPill").classList.toggle("live",live); $("connStatusPill").classList.toggle("offline",!live);
@@ -2298,8 +2398,14 @@ function renderAdminLists(){
   $("pendingList").innerHTML = pending.length ? pending.map(pendingCardHtml).join("") : '<div class="empty-state">No pending registrations found.</div>';
   $("verifiedList").innerHTML = verified.length ? verified.map(verifiedCardHtml).join("") : '<div class="empty-state">No verified members found.</div>';
   $("verifiedRegistrationNames").innerHTML = verified.length
-    ? verified.map(r=>`<span class="compact-name">✓ ${escapeHtml(r.fullName||"—")}</span>`).join("")
+    ? verified.map(r=>`<span class="compact-name" data-id="${escapeHtml(r.id)}">✓ ${escapeHtml(r.fullName||"—")}</span>`).join("")
     : '<span class="empty-state">No verified registrations yet.</span>';
+  $("verifiedRegistrationNames").querySelectorAll(".compact-name").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const rec = recordsCache.find(x=>x.id === el.dataset.id);
+      if(rec) openViewRecord(rec);
+    });
+  });
   wireCardActions();
   // Bulk-verify selections only persist for records still visible in the pending list
   const visibleIds = new Set(pending.map(r=>r.id));
@@ -2798,114 +2904,6 @@ checkVerifyStatusPage().then(function(isVerifyPage){
 });
 
 })();
-
-function ytaBindNamesByRenderedLists(){
-  /* Nomination compact names */
-  document.querySelectorAll("#adminNominationsList .yta-click-name,[id*='approved'] .yta-click-name,[id*='rejected'] .yta-click-name").forEach(()=>{});
-  ytaMakeAdminNamesClickable();
-}
-
-/* ============================================================
-   ADMIN CLICK-TO-VIEW FULL RECORD
-============================================================ */
-function ytaEsc(v){
-  return escapeHtml(String(v ?? "—"));
-}
-
-function ytaShowRecordDetails(record, type){
-  if(!record) return;
-
-  const isNomination = type === "nomination";
-  $("ytaDetailTitle").textContent =
-    isNomination ? "📋 Full Nomination Details" : "📝 Full Registration Details";
-
-  const fields = isNomination ? [
-    ["Registration Number", record.registration_number],
-    ["Full Name", record.full_name],
-    ["Father's Name", record.father_name],
-    ["School Name", record.school_name],
-    ["SEMIS Code", record.semis_code],
-    ["WhatsApp Number", record.whatsapp_number],
-    ["Taluka", record.taluka],
-    ["Post", record.post],
-    ["Status", record.status],
-    ["Reviewed By", record.reviewed_by],
-    ["Reviewed By Name", record.reviewed_by_name],
-    ["Reviewed At", record.reviewed_at ? new Date(record.reviewed_at).toLocaleString() : "—"],
-    ["Submitted At", record.created_at ? new Date(record.created_at).toLocaleString() : "—"]
-  ] : [
-    ["Registration Number", record.registration_number || record.reg_no],
-    ["Full Name", record.full_name || record.name],
-    ["Father's Name", record.father_name],
-    ["School Name", record.school_name || record.school],
-    ["SEMIS Code", record.semis_code],
-    ["WhatsApp Number", record.whatsapp_number || record.whatsapp],
-    ["Taluka", record.taluka],
-    ["Verification Status", record.verification_status || record.status],
-    ["Verified By", record.verified_by],
-    ["Verified By Name", record.verified_by_name],
-    ["Verified At", record.verified_at ? new Date(record.verified_at).toLocaleString() : "—"],
-    ["Submitted At", record.created_at ? new Date(record.created_at).toLocaleString() : "—"]
-  ];
-
-  $("ytaDetailGrid").innerHTML = fields.map(([label,value]) => `
-    <div class="yta-detail-row">
-      <span class="yta-detail-label">${ytaEsc(label)}</span>
-      <span class="yta-detail-value">${ytaEsc(value)}</span>
-    </div>
-  `).join("");
-
-  $("ytaDetailOverlay").classList.remove("hidden");
-}
-
-function ytaCloseRecordDetails(){
-  $("ytaDetailOverlay").classList.add("hidden");
-}
-
-$("ytaDetailClose").addEventListener("click", ytaCloseRecordDetails);
-$("ytaDetailOverlay").addEventListener("click", e=>{
-  if(e.target === $("ytaDetailOverlay")) ytaCloseRecordDetails();
-});
-document.addEventListener("keydown", e=>{
-  if(e.key === "Escape") ytaCloseRecordDetails();
-});
-
-/* Re-render compact name cells as clickable records after admin data loads. */
-function ytaMakeAdminNamesClickable(){
-  document.querySelectorAll("[data-yta-record-id]").forEach(el=>{
-    if(el.dataset.ytaBound === "1") return;
-    el.dataset.ytaBound = "1";
-    el.classList.add("yta-click-name");
-    el.addEventListener("click", ()=>{
-      const type=el.dataset.ytaRecordType;
-      const id=el.dataset.ytaRecordId;
-      const source = type === "nomination" ? (nominationsCache || []) : (registrationsCache || []);
-      const record = source.find(r=>String(r.id)===String(id));
-      if(record) ytaShowRecordDetails(record,type);
-    });
-  });
-}
-
-/* Observe admin lists because the existing app re-renders them after actions/search. */
-const ytaAdminObserver = new MutationObserver(()=>ytaMakeAdminNamesClickable());
-["adminNominationsList","adminRegistrationsList","verifiedMembersList"].forEach(id=>{
-  const el=$(id);
-  if(el) ytaAdminObserver.observe(el,{childList:true,subtree:true});
-});
-setTimeout(ytaMakeAdminNamesClickable,500);
 </script>
-
-<!-- ADMIN RECORD DETAIL MODAL -->
-<div id="ytaDetailOverlay" class="yta-detail-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ytaDetailTitle">
-  <div class="yta-detail-modal">
-    <div class="yta-detail-head">
-      <h3 id="ytaDetailTitle">Record Details</h3>
-      <button type="button" class="yta-detail-close" id="ytaDetailClose" aria-label="Close">×</button>
-    </div>
-    <div class="yta-detail-body">
-      <div id="ytaDetailGrid" class="yta-detail-grid"></div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
