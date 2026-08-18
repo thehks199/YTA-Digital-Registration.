@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>YTA — Digital Membership &amp; Election Management System</title>
+<title>YTA — Digital Registration, Nomination &amp; Election System</title>
 <link rel="icon" type="image/jpeg" href="assets/yta-logo.jpg">
-<meta name="description" content="Young Teachers Alliance — District Naushahro Feroze. Digital membership registration for the Taluka Election.">
+<meta name="description" content="Young Teachers Alliance — District Naushahro Feroze. Digital registration, nomination and election system.">
 <meta property="og:title" content="YTA — Digital Membership &amp; Election Management System">
 <meta property="og:description" content="Young Teachers Alliance — District Naushahro Feroze. Register your YTA membership for the Taluka Election.">
 <meta property="og:image" content="https://thehks199.github.io/YTA-Digital-Registration./assets/yta-logo.jpg">
@@ -278,6 +278,98 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   .admin-filters{grid-template-columns:2fr 1fr;}
   .stat-grid{grid-template-columns:repeat(4,1fr);}
 }
+
+
+/* ============================================================
+   REGISTRATION / NOMINATION / ELECTION MODULES
+============================================================ */
+.process-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:16px 0;
+}
+.process-card{
+  border:1px solid var(--line);
+  border-top:4px solid var(--deep-blue);
+  background:#fff;
+  border-radius:var(--radius-lg);
+  padding:16px 10px;
+  cursor:pointer;
+  text-align:center;
+  box-shadow:var(--shadow-1);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.process-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-2);}
+.process-card.process-nomination{border-top-color:var(--gold);}
+.process-card.process-election{border-top-color:var(--emerald);}
+.process-icon{display:block;font-size:28px;line-height:1;margin-bottom:8px;}
+.process-title{display:block;font-weight:800;color:var(--deep-blue-2);font-size:14px;}
+.process-sub{display:block;color:#6b7a78;font-size:10.5px;line-height:1.35;margin-top:4px;}
+.election-module{margin-top:16px;}
+.nomination-declaration{
+  background:#F3F5F1;
+  border:1px solid var(--line);
+  border-left:4px solid var(--gold);
+  border-radius:var(--radius-md);
+  padding:12px 14px;
+  font-size:12.5px;
+  line-height:1.55;
+}
+.nomination-declaration input{margin-right:7px;accent-color:var(--emerald);}
+.nomination-result{
+  margin-top:14px;
+  padding:14px;
+  border-radius:var(--radius-md);
+  font-size:12.5px;
+  line-height:1.55;
+}
+.nomination-result.success{background:var(--emerald-2);border:1px solid #BFE3CE;color:#0F6B3A;}
+.nomination-result.error{background:var(--danger-bg);border:1px solid #efc3c0;color:var(--danger);}
+.election-candidate-result{margin-top:14px;}
+.candidate-group{
+  border:1px solid var(--line);
+  border-radius:var(--radius-md);
+  margin-bottom:10px;
+  overflow:hidden;
+  background:#fff;
+}
+.candidate-post{
+  background:var(--deep-blue-2);
+  color:#fff;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:700;
+}
+.candidate-row{
+  padding:10px 12px;
+  border-top:1px solid #F0F1EC;
+  font-size:12.5px;
+}
+.candidate-row .candidate-name{font-weight:700;color:var(--deep-blue-2);}
+.candidate-row .candidate-school{font-size:11px;color:#6b7a78;margin-top:2px;}
+.admin-nomination-card{border-left:4px solid var(--gold);}
+.nomination-admin-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-left:4px solid var(--gold);
+  border-radius:var(--radius-md);
+  padding:13px;
+  margin-bottom:10px;
+}
+.nomination-admin-card.approved{border-left-color:var(--emerald);}
+.nomination-admin-card.rejected{border-left-color:var(--danger);}
+.nomination-admin-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+.nomination-admin-post{font-weight:800;color:var(--deep-blue-2);}
+.nomination-admin-meta{font-size:11.5px;color:#6b7a78;line-height:1.7;margin-top:7px;}
+.nomination-admin-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;}
+.nomination-admin-actions .btn{width:auto;min-height:36px;padding:8px 12px;font-size:11.5px;}
+@media(max-width:560px){
+  .process-grid{grid-template-columns:1fr;}
+  .process-card{display:grid;grid-template-columns:38px 1fr;text-align:left;align-items:center;column-gap:8px;}
+  .process-icon{grid-row:1 / span 2;margin:0;text-align:center;}
+}
+
 </style>
 </head>
 <body>
@@ -294,7 +386,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       </div>
     </div>
     <div class="page-title">
-      <span>Taluka Election Membership Registration</span>
+      <span>Registration · Nomination · Election</span>
       <button type="button" class="admin-link no-print" id="openAdminLogin">🔐 Admin</button>
     </div>
   </div>
@@ -315,19 +407,39 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   </ol>
   <div class="step-bar"><div class="step-bar-fill" id="stepBarFill"></div></div>
 
+  <!-- YTA THREE MAIN BLOCKS -->
+  <div class="process-grid no-print">
+    <button type="button" class="process-card process-registration" id="openRegistrationBlock">
+      <span class="process-icon">📝</span>
+      <span class="process-title">Registration</span>
+      <span class="process-sub">Membership Registration · All Talukas</span>
+    </button>
+    <button type="button" class="process-card process-nomination" id="openNominationBlock">
+      <span class="process-icon">📋</span>
+      <span class="process-title">Nomination</span>
+      <span class="process-sub">Self Nomination · Taluka Level</span>
+    </button>
+    <button type="button" class="process-card process-election" id="openElectionBlock">
+      <span class="process-icon">🗳️</span>
+      <span class="process-title">Election</span>
+      <span class="process-sub">Taluka-wise Election Information</span>
+    </button>
+  </div>
+
   <div class="info-card">
     <div class="info-card-inner">
-      <div class="kicker">🗳️ Taluka Election Schedule</div>
-      <h2>Registration is open — act before the deadline</h2>
+      <div class="kicker">🗳️ YTA Election Process</div>
+      <h2>Registration · Nomination · Election</h2>
       <div class="info-grid">
-        <div class="info-item"><span class="num" id="infoDays">4</span><span class="cap">Days to register — until <span id="infoDeadline">Thursday</span></span></div>
-        <div class="info-item"><span class="num">2</span><span class="cap">Days for nomination forms after registration closes</span></div>
-        <div class="info-item"><span class="num">🗳️</span><span class="cap">Election held after the nomination process completes</span></div>
+        <div class="info-item"><span class="num">📝</span><span class="cap">Membership Registration</span></div>
+        <div class="info-item"><span class="num">📋</span><span class="cap">Self Nomination for Taluka-level posts</span></div>
+        <div class="info-item"><span class="num">🗳️</span><span class="cap">Taluka Election</span></div>
       </div>
       <div class="warning-box"><b>⚠️ Important:</b> Only teachers who complete their YTA membership are eligible to submit nomination forms for Taluka-level posts and to take part in the election. All information provided will be verified through the <b>Biometric Checker</b>.</div>
     </div>
   </div>
 
+  <div id="registrationBlock">
   <form id="regForm" novalidate>
   <!-- STEP 1 -->
   <section class="card step-panel" data-step-panel="1">
@@ -478,6 +590,116 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     </div>
   </section>
   </form>
+  </div>
+
+  <!-- NOMINATION BLOCK -->
+  <section id="nominationBlock" class="card election-module hidden no-print">
+    <span class="section-eyebrow">Nomination Registration</span>
+    <h2>📋 Taluka-Level Self Nomination</h2>
+    <p class="sub">Select your Taluka and the post for which you are nominating yourself.</p>
+
+    <form id="nominationForm" novalidate>
+      <div class="field">
+        <label for="nomRegistrationNumber">YTA Registration Number<span class="req">*</span></label>
+        <input type="text" id="nomRegistrationNumber" placeholder="e.g. YTA-NF-0001" autocomplete="off">
+        <div class="hint">Enter the Registration Number received after membership registration.</div>
+        <div class="error-msg" id="err-nomRegistrationNumber">⚠ Please enter your YTA Registration Number.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomFullName">Full Name<span class="req">*</span></label>
+        <input type="text" id="nomFullName" placeholder="Enter your full name">
+        <div class="error-msg" id="err-nomFullName">⚠ Please enter your full name.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomFatherName">Father's Name / Surname<span class="req">*</span></label>
+        <input type="text" id="nomFatherName" placeholder="Enter father's name / surname">
+        <div class="error-msg" id="err-nomFatherName">⚠ Please enter father's name / surname.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomSchoolName">School Name<span class="req">*</span></label>
+        <input type="text" id="nomSchoolName" placeholder="Enter school name">
+        <div class="error-msg" id="err-nomSchoolName">⚠ Please enter school name.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomSemisCode">School SEMIS Code<span class="req">*</span></label>
+        <input type="text" id="nomSemisCode" placeholder="Enter SEMIS code" inputmode="numeric">
+        <div class="error-msg" id="err-nomSemisCode">⚠ Please enter SEMIS code.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomWhatsappNumber">WhatsApp Number<span class="req">*</span></label>
+        <input type="tel" id="nomWhatsappNumber" placeholder="03001234567" inputmode="tel">
+        <div class="error-msg" id="err-nomWhatsappNumber">⚠ Please enter WhatsApp number.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomTaluka">Taluka Level<span class="req">*</span></label>
+        <select id="nomTaluka">
+          <option value="" selected disabled>Select your Taluka</option>
+        </select>
+        <div class="error-msg" id="err-nomTaluka">⚠ Please select your Taluka.</div>
+      </div>
+
+      <div class="field">
+        <label for="nomPost">I am nominating myself for<span class="req">*</span></label>
+        <select id="nomPost">
+          <option value="" selected disabled>Select Taluka-level post</option>
+          <option>President</option>
+          <option>Senior Vice President</option>
+          <option>Vice President</option>
+          <option>General Secretary</option>
+          <option>Deputy General Secretary</option>
+          <option>Information Secretary</option>
+          <option>Deputy Information Secretary</option>
+          <option>Joint Secretary</option>
+          <option>Press Secretary</option>
+          <option>Finance Secretary</option>
+          <option>Office Secretary</option>
+        </select>
+        <div class="error-msg" id="err-nomPost">⚠ Please select a post.</div>
+      </div>
+
+      <div class="nomination-declaration">
+        <label>
+          <input type="checkbox" id="nomDeclaration">
+          I confirm that I am nominating myself for the selected Taluka-level post and that the information provided is correct.
+        </label>
+      </div>
+
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-ghost" id="closeNominationBlock">Back</button>
+        <button type="submit" class="btn btn-primary" id="submitNominationBtn">
+          <span id="nominationBtnLabel">Submit Nomination</span>
+        </button>
+      </div>
+    </form>
+
+    <div id="nominationResult" class="nomination-result hidden"></div>
+  </section>
+
+  <!-- ELECTION BLOCK -->
+  <section id="electionBlock" class="card election-module hidden no-print">
+    <span class="section-eyebrow">Election</span>
+    <h2>🗳️ Taluka Election</h2>
+    <p class="sub">Select a Taluka to view approved nomination candidates.</p>
+
+    <div class="field">
+      <label for="electionTaluka">Select Taluka</label>
+      <select id="electionTaluka">
+        <option value="" selected>Select Taluka</option>
+      </select>
+    </div>
+
+    <div id="electionCandidateResult" class="election-candidate-result">
+      <div class="empty-state">Select a Taluka to view candidates.</div>
+    </div>
+
+    <button type="button" class="btn btn-ghost" id="closeElectionBlock" style="margin-top:14px;">Back</button>
+  </section>
 
   <p class="privacy-note">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6l8-4z" stroke="#7a8983" stroke-width="1.6"/></svg>
@@ -591,6 +813,23 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div class="admin-section-head"><h2>🟢 Verified Members</h2><span class="count-badge" id="verifiedCountBadge">0</span></div>
     <div id="verifiedList"></div>
 
+    <div class="card admin-nominations-card" style="padding:16px;">
+      <div class="admin-section-head" style="margin-top:0;">
+        <h2>📋 Nomination Applications</h2>
+        <span class="count-badge" id="nominationCountBadge">0</span>
+      </div>
+      <div class="admin-filters">
+        <select id="adminNominationTaluka"><option value="">All Talukas</option></select>
+        <select id="adminNominationStatus">
+          <option value="all">All Nomination Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div id="adminNominationsList"></div>
+    </div>
+
     <div class="records-toggle no-print" id="activityToggle" role="button" tabindex="0" aria-expanded="false">
       <div><div style="font-weight:700; font-size:13.5px; color:var(--deep-blue-2);">Admin Activity Log</div><div style="font-size:11.5px; color:#6b7a78; margin-top:2px;" id="activityCountLabel">0 actions recorded</div></div>
       <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b7a78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -702,8 +941,6 @@ const CONFIG = {
   district: "Naushahro Feroze",
   developerName: "Syed Sibtain Raza",
   developerPhone: "03002627199",
-  membershipDeadline: "Thursday",
-  membershipDays: 4,
   talukas: ["Naushahro Feroze","Moro","Kandiaro","Mehrabpur","Bhiria"]
 };
 
@@ -744,6 +981,8 @@ let recordsCache = [];            // live copy of all registrations, admin-only 
 let activityCache = [];           // live copy of activity log, admin-only
 let unsubRegistrations = null;
 let unsubActivity = null;
+let unsubNominations = null;
+let nominationsCache = [];
 let lastAdminActivityAt = Date.now();
 let supabaseReady = false;
 let supabase = null;
@@ -797,16 +1036,20 @@ if(isConfigured && window.supabase){
 function applyConfig(){
   $("orgNameHeader").textContent = CONFIG.organizationName.toUpperCase();
   $("districtHeader").textContent = "District " + CONFIG.district;
-  $("infoDays").textContent = CONFIG.membershipDays;
-  $("infoDeadline").textContent = CONFIG.membershipDeadline;
   $("pvDistrict").textContent = "District " + CONFIG.district;
   $("adminTagLine").textContent = "YTA · " + CONFIG.district;
 
   const talukaSelect = $("taluka");
   const adminFilterTaluka = $("adminFilterTaluka");
+  const nomTaluka = $("nomTaluka");
+  const electionTaluka = $("electionTaluka");
+  const adminNominationTaluka = $("adminNominationTaluka");
   CONFIG.talukas.forEach(t=>{
     const o1 = document.createElement("option"); o1.value = t; o1.textContent = t; talukaSelect.appendChild(o1);
     const o2 = document.createElement("option"); o2.value = t; o2.textContent = t; adminFilterTaluka.appendChild(o2);
+    if(nomTaluka){ const o3=document.createElement("option"); o3.value=t; o3.textContent=t; nomTaluka.appendChild(o3); }
+    if(electionTaluka){ const o4=document.createElement("option"); o4.value=t; o4.textContent=t; electionTaluka.appendChild(o4); }
+    if(adminNominationTaluka){ const o5=document.createElement("option"); o5.value=t; o5.textContent=t; adminNominationTaluka.appendChild(o5); }
   });
 }
 
@@ -1206,6 +1449,218 @@ $("newRegBtn").addEventListener("click", ()=>{
 });
 $("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle("open"));
 
+
+/* ============================================================
+   REGISTRATION / NOMINATION / ELECTION MODULES
+============================================================ */
+function showTeacherModule(moduleId){
+  ["registrationBlock","nominationBlock","electionBlock"].forEach(id=>{
+    const el=$(id);
+    if(el) el.classList.toggle("hidden", id !== moduleId);
+  });
+  if(moduleId==="registrationBlock"){
+    $("stepper").classList.remove("hidden");
+    $("stepBarFill").parentElement.classList.remove("hidden");
+  }else{
+    $("stepper").classList.add("hidden");
+    $("stepBarFill").parentElement.classList.add("hidden");
+  }
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("openRegistrationBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
+$("openNominationBlock").addEventListener("click",()=>showTeacherModule("nominationBlock"));
+$("openElectionBlock").addEventListener("click",()=>showTeacherModule("electionBlock"));
+$("closeNominationBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
+$("closeElectionBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
+
+function nominationFormValid(){
+  const fields=[
+    ["nomRegistrationNumber","nomRegistrationNumber"],
+    ["nomFullName","nomFullName"],
+    ["nomFatherName","nomFatherName"],
+    ["nomSchoolName","nomSchoolName"],
+    ["nomSemisCode","nomSemisCode"],
+    ["nomWhatsappNumber","nomWhatsappNumber"],
+    ["nomTaluka","nomTaluka"],
+    ["nomPost","nomPost"]
+  ];
+  let ok=true;
+  fields.forEach(([id,key])=>{
+    const el=$(id), err=$("err-"+id);
+    const bad=!el || !String(el.value||"").trim();
+    if(err) err.classList.toggle("show",bad);
+    if(bad) ok=false;
+  });
+  if(!$("nomDeclaration").checked){
+    ok=false;
+    showToast("Please confirm the self-nomination declaration.",true);
+  }
+  return ok;
+}
+
+$("nominationForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const result=$("nominationResult");
+  result.className="nomination-result hidden";
+  if(!nominationFormValid()) return;
+  if(!supabaseReady){
+    result.className="nomination-result error";
+    result.textContent="Supabase is not configured. Please connect the app to the central database first.";
+    return;
+  }
+
+  const btn=$("submitNominationBtn");
+  btn.disabled=true;
+  $("nominationBtnLabel").innerHTML='<span class="spinner"></span> Submitting...';
+
+  const payload={
+    registration_number:$("nomRegistrationNumber").value.trim(),
+    full_name:$("nomFullName").value.trim(),
+    father_name:$("nomFatherName").value.trim(),
+    school_name:$("nomSchoolName").value.trim(),
+    semis_code:$("nomSemisCode").value.trim(),
+    whatsapp_number:$("nomWhatsappNumber").value.trim(),
+    taluka:$("nomTaluka").value,
+    post:$("nomPost").value,
+    status:"pending"
+  };
+
+  try{
+    const {error}=await supabase.from("nominations").insert(payload);
+    if(error) throw error;
+
+    result.className="nomination-result success";
+    result.innerHTML="<b>✅ Nomination Submitted Successfully</b><br><br>"+
+      "Registration No.: <b>"+escapeHtml(payload.registration_number)+"</b><br>"+
+      "Taluka: <b>"+escapeHtml(payload.taluka)+"</b><br>"+
+      "Post: <b>"+escapeHtml(payload.post)+"</b><br><br>"+
+      "Your nomination has been submitted for YTA administration verification.";
+    $("nominationForm").reset();
+  }catch(err){
+    console.error(err);
+    result.className="nomination-result error";
+    result.innerHTML="<b>❌ Nomination Could Not Be Submitted</b><br>"+escapeHtml(err.message||"Please try again.");
+  }finally{
+    btn.disabled=false;
+    $("nominationBtnLabel").textContent="Submit Nomination";
+  }
+});
+
+$("electionTaluka").addEventListener("change",loadPublicCandidates);
+
+async function loadPublicCandidates(){
+  const taluka=$("electionTaluka").value;
+  const box=$("electionCandidateResult");
+  if(!taluka){
+    box.innerHTML='<div class="empty-state">Select a Taluka to view candidates.</div>';
+    return;
+  }
+  if(!supabaseReady){
+    box.innerHTML='<div class="empty-state">Election information will appear when the central database is connected.</div>';
+    return;
+  }
+  box.innerHTML='<div class="empty-state">Loading approved candidates…</div>';
+  try{
+    const {data,error}=await supabase.from("nominations")
+      .select("full_name,school_name,taluka,post,status")
+      .eq("taluka",taluka)
+      .eq("status","approved")
+      .order("post",{ascending:true});
+    if(error) throw error;
+    if(!data || !data.length){
+      box.innerHTML='<div class="empty-state">No approved candidates are currently listed for '+escapeHtml(taluka)+'.</div>';
+      return;
+    }
+    const groups={};
+    data.forEach(r=>(groups[r.post] ||= []).push(r));
+    box.innerHTML=Object.entries(groups).map(([post,rows])=>`
+      <div class="candidate-group">
+        <div class="candidate-post">${escapeHtml(post)}</div>
+        ${rows.map(r=>`<div class="candidate-row">
+          <div class="candidate-name">${escapeHtml(r.full_name)}</div>
+          <div class="candidate-school">${escapeHtml(r.school_name||"")}</div>
+        </div>`).join("")}
+      </div>`).join("");
+  }catch(err){
+    console.error(err);
+    box.innerHTML='<div class="nomination-result error" style="display:block;">Could not load candidates: '+escapeHtml(err.message||"Unknown error")+'</div>';
+  }
+}
+
+/* ADMIN: NOMINATIONS */
+async function loadNominations(){
+  if(!supabaseReady) return;
+  try{
+    const {data,error}=await supabase.from("nominations").select("*").order("created_at",{ascending:false});
+    if(error) throw error;
+    nominationsCache=data||[];
+    renderAdminNominations();
+  }catch(err){
+    console.warn("Nomination load failed:",err.message);
+    $("adminNominationsList").innerHTML='<div class="empty-state">Nomination table is not available yet. Create the nominations table in Supabase first.</div>';
+  }
+}
+function filteredNominations(){
+  const taluka=$("adminNominationTaluka").value;
+  const status=$("adminNominationStatus").value;
+  return nominationsCache.filter(r=>
+    (!taluka || r.taluka===taluka) &&
+    (status==="all" || String(r.status||"pending").toLowerCase()===status)
+  );
+}
+function nominationStatusPill(status){
+  const s=String(status||"pending").toLowerCase();
+  const cls=s==="approved"?"verified":s==="rejected"?"pending":"pending";
+  return `<span class="status-pill ${cls}"><span></span>${escapeHtml(s.charAt(0).toUpperCase()+s.slice(1))}</span>`;
+}
+function renderAdminNominations(){
+  const rows=filteredNominations();
+  $("nominationCountBadge").textContent=rows.length;
+  $("adminNominationsList").innerHTML=rows.length?rows.map(r=>`
+    <div class="nomination-admin-card ${escapeHtml(String(r.status||"pending").toLowerCase())}" data-nomination-id="${escapeHtml(r.id)}">
+      <div class="nomination-admin-top">
+        <div>
+          <div class="nomination-admin-post">${escapeHtml(r.post||"—")}</div>
+          <div style="font-weight:700;color:var(--deep-blue-2);margin-top:3px;">${escapeHtml(r.full_name||"—")}</div>
+        </div>
+        ${nominationStatusPill(r.status)}
+      </div>
+      <div class="nomination-admin-meta">
+        Registration: ${escapeHtml(r.registration_number||"—")}<br>
+        Taluka: ${escapeHtml(r.taluka||"—")}<br>
+        School: ${escapeHtml(r.school_name||"—")}<br>
+        SEMIS: ${escapeHtml(r.semis_code||"—")} · WhatsApp: ${escapeHtml(r.whatsapp_number||"—")}
+      </div>
+      <div class="nomination-admin-actions">
+        <button type="button" class="btn btn-primary btn-sm nom-approve" data-id="${escapeHtml(r.id)}">✓ Approve</button>
+        <button type="button" class="btn btn-danger btn-sm nom-reject" data-id="${escapeHtml(r.id)}">✕ Reject</button>
+      </div>
+    </div>`).join(""):'<div class="empty-state">No nomination applications found.</div>';
+
+  document.querySelectorAll(".nom-approve").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"approved")));
+  document.querySelectorAll(".nom-reject").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"rejected")));
+}
+async function updateNominationStatus(id,status){
+  if(!canPerform("verify")){showToast("Your administrator role does not have permission to manage nominations.",true);return;}
+  try{
+    const target=nominationsCache.find(x=>x.id===id);
+    const {error}=await supabase.from("nominations").update({
+      status:status,
+      reviewed_by:currentAdmin.id,
+      reviewed_by_name:(currentAdmin.full_name||adminEmail||"Administrator"),
+      reviewed_at:new Date().toISOString()
+    }).eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("NOMINATION_"+status.toUpperCase(),target.registration_number,target.full_name);
+    showToast("Nomination "+status+".");
+    await loadNominations();
+  }catch(err){
+    showToast("Could not update nomination: "+err.message,true);
+  }
+}
+$("adminNominationTaluka").addEventListener("change",renderAdminNominations);
+$("adminNominationStatus").addEventListener("change",renderAdminNominations);
+
 /* ============================================================
    SECTION 10: PRINT
 ============================================================ */
@@ -1360,6 +1815,7 @@ async function loadWhatsappRecipients(){
 function subscribeAdminData(){
   if(unsubRegistrations){ supabase.removeChannel(unsubRegistrations); unsubRegistrations=null; }
   if(unsubActivity){ supabase.removeChannel(unsubActivity); unsubActivity=null; }
+  if(unsubNominations){ supabase.removeChannel(unsubNominations); unsubNominations=null; }
   $("connStatusPill").classList.remove("offline"); $("connStatusPill").classList.add("live");
   $("connStatusPill").innerHTML="<span></span>Connecting...";
 
@@ -1373,8 +1829,14 @@ function subscribeAdminData(){
     .subscribe();
   unsubActivity=activityChannel;
 
+  const nominationsChannel=supabase.channel("yta-nominations-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"nominations"},()=>loadNominations())
+    .subscribe();
+  unsubNominations=nominationsChannel;
+
   loadMembers();
   loadActivity();
+  loadNominations();
 }
 function setConnectionStatus(live,text){
   $("connStatusPill").classList.toggle("live",live); $("connStatusPill").classList.toggle("offline",!live);
