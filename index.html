@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>YTA — Digital Membership &amp; Election Management System</title>
+<link rel="icon" type="image/jpeg" href="assets/yta-logo.jpg">
+<meta name="description" content="Young Teachers Alliance — District Naushahro Feroze. Digital membership registration for the Taluka Election.">
+<meta property="og:title" content="YTA — Digital Membership &amp; Election Management System">
+<meta property="og:description" content="Young Teachers Alliance — District Naushahro Feroze. Register your YTA membership for the Taluka Election.">
+<meta property="og:image" content="https://thehks199.github.io/YTA-Digital-Registration./assets/yta-logo.jpg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://thehks199.github.io/YTA-Digital-Registration./">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!-- Supabase JS client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- QR code generator (for registration slip verification QR) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<!-- PDF export -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<!-- Chart.js (registration trend chart) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* =========================================================
+   SECTION 3: CSS — DESIGN TOKENS (unchanged from prior version)
+   ========================================================= */
+:root{
+  --ink:#12222B; --deep-blue:#0E3B5C; --deep-blue-2:#0A2C46; --sky:#1C6E9C;
+  --emerald:#146B47; --emerald-2:#E4F3EA; --gold:#BD9330; --gold-2:#F4E9CE;
+  --paper:#F6F5F0; --card:#FFFFFF; --line:#E1E4DE; --danger:#B3261E; --danger-bg:#FBEAE9;
+  --radius-lg:18px; --radius-md:12px; --radius-sm:8px;
+  --shadow-1:0 1px 2px rgba(14,59,92,0.06), 0 2px 8px rgba(14,59,92,0.06);
+  --shadow-2:0 8px 24px rgba(14,59,92,0.12);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0; font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--paper); color:var(--ink); min-height:100vh; overflow-x:hidden;}
+h1,h2,h3,.font-display{font-family:'Fraunces',Georgia,serif;}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+:focus-visible{outline:3px solid var(--sky); outline-offset:2px; border-radius:6px;}
+button{font-family:inherit;}
+@media (prefers-reduced-motion: reduce){*{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}}
+
+.app{max-width:640px; margin:0 auto; padding:0 16px 40px;}
+.topbar{background:var(--deep-blue-2); color:#fff; padding:14px 16px 16px; border-bottom:3px solid var(--gold);}
+.topbar-inner{max-width:640px; margin:0 auto;}
+.brand-row{display:flex; align-items:center; gap:12px;}
+.brand-mark{width:46px; height:46px; flex:0 0 auto; border-radius:10px; background:var(--gold); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.35); font-family:'Fraunces',serif; font-weight:700; color:var(--deep-blue-2); font-size:16px;}
+.brand-mark img{width:100%; height:100%; object-fit:cover; border-radius:9px;}
+.seal img{width:100%; height:100%; object-fit:cover; border-radius:50%;}
+.brand-text .org{font-size:11px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.78; font-weight:600;}
+.brand-text h1{font-size:19px; line-height:1.15; margin:2px 0 0; font-weight:600; letter-spacing:0.01em;}
+.district-line{font-size:12.5px; opacity:0.85; margin-top:2px;}
+.page-title{margin-top:14px; font-size:14.5px; font-weight:600; letter-spacing:0.01em; padding-top:12px; border-top:1px solid rgba(255,255,255,0.16); display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.admin-link{background:transparent; border:1px solid rgba(255,255,255,0.35); color:#fff; font-size:11px; padding:6px 10px; border-radius:20px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:5px; opacity:0.85;}
+.admin-link:hover{opacity:1; border-color:var(--gold);}
+
+.stepper{display:flex; gap:4px; margin:16px 0 4px; padding:0; list-style:none;}
+.step{flex:1; text-align:center;}
+.step .dot{width:26px; height:26px; margin:0 auto 5px; border-radius:50%; background:#fff; border:2px solid var(--line); color:#9AA6A0; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700; transition:all .2s ease;}
+.step .label{font-size:9.5px; color:#6B7A78; font-weight:600; letter-spacing:0.01em;}
+.step-bar{height:3px; background:var(--line); border-radius:2px; margin-top:-18px; margin-bottom:19px; overflow:hidden;}
+.step-bar-fill{height:100%; background:var(--emerald); width:0%; transition:width .3s ease;}
+.step.active .dot{background:var(--deep-blue); border-color:var(--deep-blue); color:#fff;}
+.step.active .label{color:var(--deep-blue);}
+.step.done .dot{background:var(--emerald); border-color:var(--emerald); color:#fff;}
+.step.done .label{color:var(--emerald);}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-1); padding:20px; margin-bottom:16px;}
+.card h2{font-size:16.5px; margin:0 0 4px; font-weight:600; color:var(--deep-blue-2);}
+.card .sub{font-size:12.5px; color:#68766f; margin:0 0 16px;}
+.section-eyebrow{display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; color:var(--emerald); background:var(--emerald-2); padding:4px 10px; border-radius:20px; margin-bottom:10px;}
+
+.info-card{border-radius:var(--radius-lg); overflow:hidden; margin:16px 0; background:var(--deep-blue-2); color:#fff; box-shadow:var(--shadow-1); border-top:3px solid var(--gold);}
+.info-card-inner{padding:20px;}
+.info-card .kicker{font-size:11px; letter-spacing:0.12em; text-transform:uppercase; opacity:0.85; font-weight:700; color:var(--gold-2);}
+.info-card h2{color:#fff; margin:4px 0 14px; font-size:18px;}
+.info-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+.info-item{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:var(--radius-md); padding:10px 8px; text-align:center;}
+.info-item .num{font-family:'Fraunces',serif; font-size:19px; font-weight:600; display:block; line-height:1.1;}
+.info-item .cap{font-size:10px; opacity:0.85; margin-top:3px; line-height:1.3;}
+.warning-box{margin-top:14px; background:rgba(255,255,255,0.96); color:var(--ink); border-radius:var(--radius-md); padding:12px 14px; font-size:12.5px; line-height:1.5; border-left:4px solid var(--gold);}
+.warning-box b{color:var(--danger);}
+
+.config-warning{background:#FFF6E5; border:1.5px solid var(--gold); border-radius:var(--radius-md); padding:14px 16px; margin:16px 0; font-size:12.5px; line-height:1.6; color:#5c4a12;}
+.config-warning b{color:var(--danger);}
+
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--deep-blue-2);}
+.field .req{color:var(--danger); margin-left:2px;}
+.field .hint{font-size:11.5px; color:#7a8983; margin-top:5px;}
+.field input, .field select{width:100%; padding:13px 14px; font-size:15px; border-radius:var(--radius-md); border:1.5px solid var(--line); background:#FCFCFA; color:var(--ink); transition:border-color .15s ease, box-shadow .15s ease; font-family:inherit; min-height:48px;}
+.field input:focus, .field select:focus{border-color:var(--sky); box-shadow:0 0 0 3px rgba(28,110,156,0.14); outline:none; background:#fff;}
+.field.invalid input, .field.invalid select{border-color:var(--danger); background:#FFFBFA;}
+.field .error-msg{display:none; color:var(--danger); font-size:12px; margin-top:6px; font-weight:600;}
+.field .error-msg.show{display:flex; align-items:center; gap:5px;}
+select{appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' stroke='%230E3B5C' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>"); background-repeat:no-repeat; background-position:right 14px center;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:52px; padding:14px 18px; border-radius:var(--radius-md); font-size:15px; font-weight:700; border:none; cursor:pointer; transition:transform .1s ease, filter .12s ease, background .12s ease; letter-spacing:0.01em;}
+.btn:active{transform:scale(0.98);}
+.btn:disabled{opacity:0.55; cursor:not-allowed;}
+.btn-primary{background:var(--deep-blue); color:#fff;}
+.btn-primary:hover{background:var(--sky);}
+.btn-whatsapp{background:#1F9E4D; color:#fff;}
+.btn-whatsapp:hover{background:#1B8A43;}
+.btn-ghost{background:#fff; color:var(--deep-blue); border:1.5px solid var(--line);}
+.btn-ghost:hover{border-color:var(--sky); color:var(--sky);}
+.btn-text{background:transparent; color:var(--sky); font-weight:600; width:auto; min-height:auto; padding:8px 4px;}
+.btn-row{display:flex; gap:10px;}
+.btn-row .btn{width:auto; flex:1;}
+.btn-danger{background:var(--danger); color:#fff;}
+.btn-danger:hover{background:#96201A;}
+.btn-danger-outline{background:#fff; border:1.5px solid var(--danger); color:var(--danger);}
+.btn-sm{min-height:36px; padding:8px 12px; font-size:12px;}
+.spinner{width:16px; height:16px; border-radius:50%; border:2.5px solid rgba(255,255,255,0.4); border-top-color:#fff; display:inline-block; animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.ticket{position:relative; border-radius:var(--radius-lg); overflow:visible; background:var(--card); box-shadow:var(--shadow-2); margin-bottom:16px; border:1px solid var(--line);}
+.ticket-main{padding:22px 20px 18px; position:relative;}
+.ticket-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+.ticket-org .kicker{font-size:10px; letter-spacing:0.13em; text-transform:uppercase; color:var(--emerald); font-weight:700;}
+.ticket-org h3{margin:2px 0 0; font-size:17px; color:var(--deep-blue-2);}
+.ticket-org .district{font-size:12px; color:#6b7a78; margin-top:1px;}
+.seal{width:54px; height:54px; border-radius:50%; flex:0 0 auto; background:var(--gold-2); border:2px solid var(--gold); display:flex; align-items:center; justify-content:center; text-align:center;}
+.seal span{font-family:'Fraunces',serif; font-size:9px; font-weight:700; color:var(--deep-blue-2); line-height:1.1; letter-spacing:0.02em;}
+.ticket-status{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97; padding:5px 10px; border-radius:20px; margin-bottom:14px;}
+.ticket-status .dot{width:7px; height:7px; border-radius:50%; background:#C99A1D;}
+.ticket-rows{display:grid; grid-template-columns:1fr; gap:0;}
+.trow{display:flex; justify-content:space-between; gap:14px; padding:9px 0; border-bottom:1px dashed var(--line);}
+.trow:last-child{border-bottom:none;}
+.trow .k{font-size:11.5px; color:#6b7a78; font-weight:600; flex:0 0 42%;}
+.trow .v{font-size:13.5px; color:var(--ink); font-weight:600; text-align:right; flex:1; word-break:break-word;}
+.trow .v.mono{font-family:'JetBrains Mono',monospace; font-weight:600;}
+.confirm-note{font-size:12px; color:#5c6b66; background:#F3F5F1; border-radius:var(--radius-sm); padding:10px 12px; margin:14px 20px 0; line-height:1.5;}
+.tear{position:relative; height:0; border-top:2px dashed #C7CDC5; margin:18px -1px 0;}
+.tear::before,.tear::after{content:""; position:absolute; top:-11px; width:22px; height:22px; border-radius:50%; background:var(--paper); border:1px solid var(--line);}
+.tear::before{left:-11px;} .tear::after{right:-11px;}
+.ticket-stub{padding:14px 20px 18px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.stub-label{font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:#6b7a78; font-weight:700;}
+.stub-regno{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; color:var(--deep-blue-2);}
+.ticket-note{font-size:11.5px; color:#7a8983; text-align:center; margin-top:10px; padding:0 6px;}
+
+.success-wrap{text-align:center; padding:6px 0 4px;}
+.success-check{width:64px; height:64px; margin:0 auto 12px; border-radius:50%; background:var(--emerald-2); display:flex; align-items:center; justify-content:center; animation:pop .35s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{from{transform:scale(0.5); opacity:0;} to{transform:scale(1); opacity:1;}}
+.success-check svg{width:30px; height:30px;}
+
+.mode-toggle{display:flex; gap:8px; margin-bottom:16px;}
+.mode-btn{flex:1; padding:11px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-size:13px; font-weight:600; color:#6b7a78; cursor:pointer;}
+.mode-btn.active{background:var(--deep-blue); border-color:var(--deep-blue); color:#fff;}
+.recipient-item{display:flex; align-items:center; gap:12px; padding:13px 14px; border:1.5px solid var(--line); border-radius:var(--radius-md); margin-bottom:10px; cursor:pointer; background:#fff;}
+.recipient-item.selected{border-color:var(--emerald); background:var(--emerald-2);}
+.recipient-item input{width:18px; height:18px; flex:0 0 auto; accent-color:var(--emerald);}
+.recipient-item .wa-ic{width:34px; height:34px; border-radius:50%; background:#E9F7EF; display:flex; align-items:center; justify-content:center; flex:0 0 auto; color:#1F9E4D;}
+.recipient-item .rinfo{flex:1;}
+.recipient-item .rname2{font-weight:700; font-size:13.5px; color:var(--ink);}
+.recipient-item .rnum{font-size:11.5px; color:#6b7a78; font-family:'JetBrains Mono',monospace; margin-top:2px;}
+
+.queue-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius-lg); padding:26px 20px; text-align:center; box-shadow:var(--shadow-1);}
+.queue-progress-label{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--emerald); font-weight:700; margin-bottom:10px;}
+.queue-recipient{font-family:'Fraunces',serif; font-size:19px; color:var(--deep-blue-2); font-weight:600; margin-bottom:4px;}
+.queue-recipient-num{font-size:12px; color:#6b7a78; font-family:'JetBrains Mono',monospace; margin-bottom:18px;}
+.queue-dots{display:flex; justify-content:center; gap:6px; margin-top:18px;}
+.queue-dot{width:8px; height:8px; border-radius:50%; background:var(--line);}
+.queue-dot.sent{background:var(--emerald);}
+.queue-dot.current{background:var(--sky);}
+
+.status-pill{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;}
+.status-pill.pending{color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97;}
+.status-pill.verified{color:#0F6B3A; background:var(--emerald-2); border:1px solid #BFE3CE;}
+.status-pill.live{color:#0F6B3A; background:var(--emerald-2); border:1px solid #BFE3CE;}
+.status-pill.offline{color:#8A6A00; background:var(--gold-2); border:1px solid #E3CE97;}
+
+.modal-overlay{position:fixed; inset:0; background:rgba(10,25,35,0.55); z-index:200; display:flex; align-items:center; justify-content:center; padding:18px;}
+.modal-overlay.hidden{display:none;}
+.modal{background:#fff; border-radius:var(--radius-lg); max-width:420px; width:100%; padding:24px; box-shadow:var(--shadow-2); max-height:88vh; overflow:auto;}
+.modal h3{margin:0 0 6px; font-size:17px; color:var(--deep-blue-2); display:flex; align-items:center; gap:8px;}
+.modal p{font-size:13.5px; color:#526059; line-height:1.55; margin:0 0 16px;}
+.modal .record-name{font-weight:700; color:var(--ink);}
+.admin-icon{width:40px; height:40px; border-radius:10px; background:var(--deep-blue-2); color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
+
+.admin-header{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; background:var(--deep-blue-2); color:#fff; border-bottom:3px solid var(--gold);}
+.admin-header .title{display:flex; align-items:center; gap:10px;}
+.admin-header h1{font-size:16px; margin:0; font-weight:600;}
+.admin-header .tag{font-size:10.5px; opacity:0.75; letter-spacing:0.08em; text-transform:uppercase;}
+.logout-btn{background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); color:#fff; padding:8px 14px; border-radius:20px; font-size:12.5px; font-weight:600; cursor:pointer;}
+.logout-btn:hover{background:rgba(255,255,255,0.2);}
+.stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+.stat-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:14px; text-align:center;}
+.stat-card .n{font-family:'Fraunces',serif; font-size:24px; font-weight:600; color:var(--deep-blue-2); display:block;}
+.stat-card .l{font-size:11px; color:#6b7a78; font-weight:600; margin-top:2px;}
+
+.admin-section-head{display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px;}
+.admin-section-head h2{font-size:14.5px; margin:0; display:flex; align-items:center; gap:8px; color:var(--deep-blue-2);}
+.count-badge{background:var(--line); color:var(--ink); font-size:11px; font-weight:700; padding:2px 9px; border-radius:12px;}
+
+.taluka-table-wrap{overflow-x:auto;}
+.taluka-table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:420px;}
+.taluka-table th{text-align:left; padding:8px 6px; border-bottom:2px solid var(--line); color:#6b7a78; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em;}
+.taluka-table td{padding:8px 6px; border-bottom:1px solid #F0F1EC;}
+.taluka-table td.tnum{font-family:'JetBrains Mono',monospace; text-align:center;}
+
+.admin-filters{display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:12px;}
+.admin-filters input, .admin-filters select{padding:11px 12px; border-radius:var(--radius-sm); border:1.5px solid var(--line); font-size:13px; min-height:44px;}
+.filters-row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.admin-actions-row{display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;}
+.admin-actions-row .btn{width:auto; flex:1; min-width:140px;}
+
+.member-card{background:#fff; border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:var(--radius-md); padding:14px; margin-bottom:10px;}
+.member-card.verified{border-left-color:var(--emerald);}
+.member-card .mc-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;}
+.member-card .mc-regno{font-family:'JetBrains Mono',monospace; font-size:11px; color:#6b7a78; font-weight:600;}
+.member-card .mc-name{font-size:14.5px; font-weight:700; color:var(--deep-blue-2); margin-top:2px;}
+.member-card .mc-meta{font-size:12px; color:#6b7a78; line-height:1.75;}
+.member-card .mc-verify-meta{font-size:11px; color:#0F6B3A; margin-top:8px; background:var(--emerald-2); border-radius:8px; padding:7px 10px; line-height:1.6;}
+.member-card .mc-actions{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+.member-card .mc-actions .btn{width:auto; min-height:36px; padding:8px 12px; font-size:12px; flex:0 0 auto;}
+.icon-btn{width:32px; height:32px; border-radius:8px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7a78;}
+.icon-btn:hover{border-color:var(--sky); color:var(--sky);}
+.icon-btn.del:hover{border-color:var(--danger); color:var(--danger);}
+.empty-state{text-align:center; padding:22px 10px; color:#7a8983; font-size:12.5px;}
+
+.records-toggle{display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:14px 16px; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md);}
+.records-toggle .chev{transition:transform .2s ease;}
+.records-toggle.open .chev{transform:rotate(180deg);}
+.records-panel{display:none; margin-top:12px;}
+.records-panel.open{display:block;}
+.activity-log{max-height:280px; overflow-y:auto; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:4px 0;}
+.activity-item{display:flex; justify-content:space-between; gap:10px; padding:9px 14px; border-bottom:1px solid #F3F4EF; font-size:12px;}
+.activity-item:last-child{border-bottom:none;}
+.activity-item .a-label{font-weight:600; color:var(--ink);}
+.activity-item .a-time{color:#9AA6A0; font-family:'JetBrains Mono',monospace; font-size:10.5px; white-space:nowrap;}
+
+.admin-login-field{margin-bottom:14px;}
+.admin-login-field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px;}
+.admin-login-field input{width:100%; padding:12px 14px; border-radius:var(--radius-md); border:1.5px solid var(--line); font-size:15px; min-height:46px;}
+.admin-error{color:var(--danger); font-size:12.5px; font-weight:600; margin-top:8px; display:none;}
+.admin-error.show{display:block;}
+.type-confirm{width:100%; padding:12px 14px; border-radius:var(--radius-md); border:1.5px solid var(--line); font-size:15px; margin:10px 0; text-transform:uppercase;}
+.security-note{font-size:11px; color:#8a958f; background:#F3F5F1; border-radius:var(--radius-sm); padding:10px 12px; line-height:1.5; margin-top:14px;}
+
+.toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--deep-blue-2); color:#fff; padding:12px 18px; border-radius:30px; font-size:13px; font-weight:600; box-shadow:var(--shadow-2); z-index:300; opacity:0; pointer-events:none; transition:all .22s ease; max-width:90%; text-align:center;}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+.toast.error{background:var(--danger);}
+
+.privacy-note{font-size:11.5px; color:#7a8983; text-align:center; line-height:1.6; margin:20px 0 6px; padding:0 8px;}
+.privacy-note svg{vertical-align:-2px; margin-right:3px;}
+.about-toggle{display:block; width:100%; text-align:center; background:none; border:none; color:var(--sky); font-size:12px; font-weight:600; cursor:pointer; margin:10px 0 0; padding:6px;}
+.about-panel{display:none; background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 16px; margin-top:10px; font-size:12.5px; color:#526059; line-height:1.6;}
+.about-panel.open{display:block;}
+.app-footer{margin-top:26px; padding:20px 16px 26px; text-align:center; border-top:1px solid var(--line);}
+.app-footer .org-line{font-size:12.5px; font-weight:700; color:var(--deep-blue-2);}
+.app-footer .sub-line{font-size:11px; color:#7a8983; margin-top:2px;}
+.app-footer .dev-credit{margin-top:12px; font-size:11px; color:#8a958f; line-height:1.7;}
+.app-footer .dev-credit b{color:#5c6b66; font-weight:600;}
+.app-footer .divider{width:60px; height:2px; background:var(--gold); margin:14px auto 0; border-radius:2px; opacity:0.6;}
+
+.hidden{display:none !important;}
+.hint-fallback{font-size:12px; color:#7a8983; text-align:center; margin-top:8px;}
+.hint-fallback a{color:var(--sky); font-weight:600;}
+
+@media print{
+  body{background:#fff;}
+  .topbar, .stepper, .step-bar, .btn, .no-print, .toast, .modal-overlay, .about-toggle, .about-panel, .admin-header, .icon-btn{display:none !important;}
+  .app{max-width:100%; padding:0;}
+  .card, .ticket, .member-card{box-shadow:none; border:1px solid #333;}
+  #printSheet{display:block !important;}
+}
+#printSheet{display:none;}
+
+@media (min-width:640px){
+  .app{padding:0 24px 56px;}
+  .info-grid{grid-template-columns:repeat(3,1fr);}
+  .admin-filters{grid-template-columns:2fr 1fr;}
+  .stat-grid{grid-template-columns:repeat(4,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div id="teacherApp">
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand-row">
+      <div class="brand-mark" aria-hidden="true"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACgAKADASIAAhEBAxEB/8QAHAAAAgIDAQEAAAAAAAAAAAAAAAQCBgMFBwEI/8QAQRAAAgEDAgMGAwUECQMFAAAAAQIDAAQRBSEGEjEHEyJBUWEUMnEVI0KBkTNSodEWVFVikpOUscFFguFyorLS8f/EABsBAAEFAQEAAAAAAAAAAAAAAAIAAQMEBQYH/8QANREAAQMCAwQIBgICAwAAAAAAAQACAwQRBSExEkFRYQYTInGRobHwFDKBwdHhI/EVQiRScv/aAAwDAQACEQMRAD8A6NM/WlJXqUr0pK/vTgIVCZ/elJW96nM/Xek5nowLJlCZ8+dKSvt1qUz9aUlfeiAQEqEr7mlJX96nK9KSv13okJKhK9Kyuf0qUr0rI9EAgKhK/XJpWV6nK/oaVkbejSUZGpeR69kasDtSQKLtS7n3qUjb+1YXNOhXjGsTnfFeuax04SRRRRTpL6XmfHnScz7bGpzPSk0lUwFdUJX96TmfGd6nK/vSkz+9OhKhM/Xek5nqcznfpSsjEnABYk4AHnRaBAeCxyPSsr+lXrhbh2S9SS1aC1jaNGNzNcw94olJHJDzA5Xw5J5dwevpWl4j4UuNPcmVXsM9BcnMLf8AonA5SPZuU1mRYxTPlMV8x7/d9LKw6jlDA+yqkj1uOB+HZOJdXaFudbWJSZ3QjmUlW5QM+pH6A03o3Buo3waedrZIEKlUWdXaYHzUqSAB6k+oG9bW/tJ7O9gh4YR5riOFYxZxwlDkKe8Zn6yZIJHoM+mKq4pjLWRmOlcC86cB+/JTUlEXODpRZq55q9nc6bfzWF4gSeE8rqDkdM/7HNa6Rt+tdMTQbXWtEaJpTdaiJO8RjDyPEpTxKzj9oeflIznCjyJxVR1zg7VtMvJIp59OMCMFF0bxI42/JiGB/u4zVqhxiCdgbI4B413XO+11DUUUjDdouPeqrLtvS8hrpXCPZ5dX7JcCAXUed7q6ieGyT3AbEk59gFX1JrUdovDs1hczwpZxrc2Tu0jRQLCLi1OO7nCL4Tg8wYr8vh5vWpW4xTOqOoBz97vJRuopRH1hGSozGsTHavWNYmOa1gqa8Jya8oop0kUUUUkl9CzPv1pOZ6nM9JzP71UVwlRlfrSkr9d6lNJ1zSkz70QCAlRlffGauLcJajZWsWoaPDHqX3fM80FyplwRv3SY8J6gNlm8wAaosz1dey25v7Nvgp1kS0nBlsywwcj5uX+7/wA1zfSerqKOmE0di0fMNL93dwWlhUMc8pY7I7irDwfr2n6tp/wdlafZ/wAJ4GsyclPfPnk9T1zVihnniBWOQhT1U7g/UVzviK+0+x7QbXVdOuYzJI/cajEh6MfM+5H8RXQQrEAgNg9DjrXkGKRuinbURONnjaF9eY+h8dV2dI5r4zG4Ds5clCOO2hna4trCztrhxhpYIVjZh7kda13FGjfb2ltaxzR2k5kEgl5imTtnLAEjoPL/AHp+5ljt0L3EiRKOrSMFH8ap2v8AaFYWFyILG2lvgM88yo/dA+QDBTkn/wDM0eHOxKoqA6G73Djplx3KSSmiMZbawVxsIV0+2it4CpaONY2lUYL4/wDJNFva6fb3DXVtpOmxXLsWacWy94x9eYjOapGkdoBvNXtbW600WkNw3IGdmDqfUhgMKPDnI/EPWr2oZyAqsx8gBmmrmYlQy2mJa5wvkd30KTIoHMGQICnNLNM3NNIzn1JqidomuWU9zbcPW+n3eoa1z89m1mQJraTHUZ2II+ZT4SvWrfq1z8Bp9xdSAgwxlsEY8tqo3Y5LYyHUNXmu45Nb1B2ZlJ8cVvnYD05j4j7ctHhAMRfWyEkM4bydx5cVXrCHhsDAO15AKl8ZdnN7pvC1zr2pQ2OlXkeJGtoLxZI5MkZVUxmNhnOAzDqNtq5lXSO2zU9U1DUw3dS/ZKOYopAMoXHzKT5N54O+MVzevauj09TUUYlnt2tANw4E8VwuJRxRTlke7Xmiiiit1Z6KKKKSS7pNIaTlfbNSmfelJpKqgK0Soyv1pSWSpTPnzpSV/ejCAqEz5BHrU7vVJ2ujeQTTwXLKFd0fbAAG3p0H08qVlelJXqCejiqRaUXCOKZ8Ruw2Wz0QhkvARkqIpQTuciVQf4OasPaLd6npuvEaXqd33uq2UMTWyTN4XYgHlGfCSEU5GD4z61oeEYJLmW5RNzK1vbr7s8yn/wCKMfyrsT8KaNJxBDr0sM0l9AQyFpyYwwGAeX22x9BXAdJaqCiqxfLIiwHJqvHD6jEaQMi12gb3tYZ371R+1JJtL0DSNCl+IvVS3YSyNmTmk2BkO+TgsxAHqOlVK81fUbSws72VAzDNvJG0r8jYjXm5eVhy5yVIG3mMZNX3ttsbJ9Jsr65KmWOUwwqyggswJHzEDGVGc7Y98Vy+dGu9Fjj+LjVkkRuW8uUjbBgXcc5BIyD0880+DSfEYTttHaufG/4Wl0loiKEMibfZAtqTkbZffJW/QdCuOIuIVhZYYNNs5GuB87tySIvKuWY5bqMk48AON6s/aZLLBbaJoGnSraR3M4Ejd93axxAd2oZiRgZYn/srnkGr32na6WsNWltYpJOSWWKVO5ZVjjA8R2I5uuMndutdf4o0rha5SHWeImt0S0CEXEt0Yohg5XO4UjJP1zWfjRkgxCJ8xuy3ZaBnfK+XO6tVVHLNg7YKezSbX3DiVQdD1e4l7I9ctriaSS5015FJdizcrKWG59GVxXOdX1C60fiy4awlaFrbu4VKHHyRqv8Awa7rxJwzpb8N8RXmjQD4nVbWSWR45i6SkhnBUZwMkkjHrXAOMwDxLdzLulwI7iM+qyRqw/3rY6KfC1ckwAuHXuCP/P7WJURVVFSxRyHtN0IO65t5WReayZrW8QfEPNe8vfmVwUAV+fwgDc58z0GR51p6KK72np46duzGLBZUkrpDdyKKKKnUaKKKKSS7FNJ13pSWSpSuPfNKSvvVdTkqEr7H0pWVz61KV6VleiAQqEjelLOxY4AJJOAAMkmpSufpVt4C0i1ur+zH2hFBdXKmRZ32FsoYqRGD885I28kyDucYr1tYyjiMr1LDC6Z+y1Wbsu4faK4WadPBYOzynqGu2XlCD17pCQf7zkeVdHxWG0sobGG2stOka00+GMR/DiPmLYYktzE5DHO5wfWmcPgc3KScnKgAfl7DpXiePTDEZfiWP2t1gDcX47vdl2mHXpx1LmW53FjZcZ7UDrd5dvNq0TWFpCD8NCGR1dBuxL4IDHAA222G+aqVktxqF2Fe7WORLdXzEquSHU9FYZxzbnfGCBjfNdm7QuFJdfW3uLSWOO9tciMSsyocnIyV3yDnH1NVPQ+zOW6mil1UGyt0dlktYpCGdQvKMFTjGDjPUj611OC9IKKnw8CSzS3cL3Ovu6vVNP1zg5ptfuOz9N9/rzK5/A6c0VtdXaR2qyyr3qSISOQZ5t15SMlvIdV3qpXfEGq6xr8djpN1NLYx3DtbxzxgqwICl3QbfKAMDy6YJq19qzaNFxTBwjwsl3e3POY7psifvJW5QsGMAuAAA24xgeamum9lXZNa8MTwapqHdzak6hmjB51t5P3Ff8YX1xnm3JOBXctxajwrDxX1URMsg/iaRc55BxGdr/63XM1fWVU5p4H2YPmIyudfLerd2d6dPo/Bek6ZdwxxS21uEaNQQFGScEb4ODuPLpXGu1bhWXTbqSKGMkWKNJAcftbFmJUj1MLMUb0UoelfQpQlu754o3XxN3h3KhgCAMj3GfI42O9azibR7TW9NEE9wbS4t2MtpeBQTbvjBJB2ZCMhlOxBIrynCMUkw+t+KlItKSTyN9++2ZHmtKrpm1UJiYDdlh39y+RqKsnGek2dlK9xaPBGfiXt5beFy8XOqhi8L+cRBGx8Sk8pz1qt17PTzsqIxIzQripIzG7ZKKKKKnQIooopJLqMz+vWlJnO9SmfalZXqEBTKErGlZWqcj7mlZG60QTKMjbU5pFy0mLFZO7mEgls5M45Zf3c+QYAD6ha1sjbfWlnaoamnbURmN29PHKY3BwX0TwTxhZaroyT31xFaXcLrDOJjygOcgE56ZIPXAB29K38aWdsGvo5phGEB5e9cqI3JwGjYkYySwO23puD88cP63eJfpd2cuNTClJIz8t7HjBUjoXxsQfnH94b9h7OuKE1VI7a1keSAbCJ5vv7LGcr4zmSLYAH516EHY15jVYT/i9vq7gEg62yBvkbZcj6G4G+ao1bmF1iByuQTxG8X8N+Wat1rcW10ryW13BcKJDGWVwfFnofQnO3ruegzVI7aeM5+EeF3bTYHl1S5BWBlTmWBc4MzY9CQAPNiKvkgLBQCquD+0KBmA2yB+Qx+dVfRdDv7rUbjU+IIbdea6aaC1D97ycrERMzeoX8IyAT6jfnqR2GwzR1T27TW5uYTm43yGmns2Wz/wAt7HxONidCBl6++aqfYp2eSaLBDxLr8EY16aDlVOXBgQ+bespGzHy6dcmupXDmHuZkiuncyrHhYuYMvlk/hUZJ5vLBHngxuvijAy2bwxysQC8qlgq75PKPmPQgEgbb1GO3MFqYYHdpOViryfeMznfmb95ifLYeWwwKsTY1LW1RrJ3AvebBuYDRfIcNkbh/aryUfVx9SwENbmTxy9Uq72+mspluo5p7luUfESYmuZcqqKNgvKOY+EDwjcDqTSe1vigww/0b0qWP4y5B7984SFAMsT6DGSfQe5qXGPGi6Za21hZI95r7K4UNyEwFiCc8vhDAAeyDIJ2JPEde1QyGa3iuPiZZzm8ugSe9Oc8iE/gB3z+I79AK3cNwJ1dOx8ovs6n/ALEHXuHmctBdZ7674eJ2zkDoOA/PoktavI7m4SK25/hLde7g5tmYZyzkfvMxLH6geVIUUV6jFG2NgY3QLm3uL3XKKKKKNCiiiikkugSv5+tKSvU5X96WkeowpVCR/Wpvp9x172y/1kX/ANqVdqYbSb1mZR8PhepMy4x5nPoM4PpUUr9n/YDv/tCXtb8ycudMtbGxeea1uNQEXdi5lguVSKJnGVQHDF9iMt8udvrn0HROFdUhmurviO80uNNu4ezE0nNjOQwYKVx6gH2rUT6XqW0TSQsoPIpNwvLgZ/8AbkEfXasMmjarGZYyIkx8/wB+uMb5PXoMHJ8qou2jGdmYB3G4It3HJSNqIAbkXCf4l4SudO086xpl9BrOkBsNeWwKmA+QlQ+KM+5296npmrWghsLia7uLfWHkYfGwnwgAgJ3y9WPnzrg4681J6Pd6/oOsFbC8ihmEbczGVTE8fRg2dmXOQVI/KmtRF4yfaVroXD1nKys6zWs+Tkc2SkZcqD4WxhdiNqqztdMBFOQ7gQWi4PEHdfhcHgpGVMMZ2o3W5H1C6Zw12nNbSR2PFMIRj4Y7yBg8cnuCuzfUb+oFdI03ULHUrcT2F1Fcxn8UbZx9fSvlXTbHWra5a0hktgjrzyJLKrwMMkYYHI5sg++1bvSU1KGYNavLpVwVJ+6ug8ZH0LBl23xzEY3rjsU6HQkl9O8D08NR5rapekLQNmQ3+vv7L6F13X9I0SEyajexwnGQmcufoo3rl/E3aJfa0jw6Qy6XpmG7y8lbDMAMkJ5s2Pwrn3Iqi6ja6geadYob6Un9td3cbczAgeGIHBOSPmLdRWlvYtat2g1q5lDSAjkJkV2j8gCn4RvjGMb4NTYT0Qp2WfK8Odu4X7vz4FDU9IA/sxnL37+6Z17ULFtIhGlNPEZ2dLw3DBp5sEFSWGyxnPyDzBJLbY2mk8BqlrBe8W6zHw/DcANBbmEzXcqno3dgjkU+rkZ9KxaJqF3ZfD3ml8P6DBezbw3TMWaI4JDBJGKxnY4OPpitPeR61q92l1d3Ammu2Z+eW4GSR1LEnY+ma7BjZWN6qEhgF7kkE78gBllbfw0WO6aEnbedo8Ny2HEmk8MaFfd3Dqt5rkbrzx91ELUKMkeNm5jnIOyjHnmsN9oCNZ99BDLp1wI45jbXtzGVeKTIV0k8ODkbowBwcjzrXrpGp3TRN93I8ykrzTqTsOh32JzsPOsyaNrFxbAFou6CCUK9wo5ugAHqwyBg9MgVZbtMa3amBI1N+fDTkoTNDc5WCSudPnt4TLJJaMoIGI7qN239lYmk6f1DSryxhEtwIQpYLhJVZlO+xA6dD+lIVfidtNvcHuUW012bUUUUVIkrjK3WlZG8qlK+/WlpH96BSEqMjZBFWAXIktbYA554gW2xg84Yj9cGqy7VmXU5IhbqIlIh2PiPiH/HQVSraYztAbqL+h+9lWnjLxl7yVluTmKEk7nvPz+8am7wpySBiSfviTjovfDb6g5P51VH4huOecmFCJM8o5z4csGP13Ht5iscvEd0Q4MMeGJPzHO+Obf3wPpWQcKqHX004qmaV5Cd1mYJxLp72xePxYz3mS33nXOB1GDinLidJ0YX1zcZluFVWEpBLHJwdjkEncbDc1WdQ1aS71KG9MCI0TcwXmJ5jzc25/lTlpxNc2xfktozzsSRzkAjBGD69f1xWhJSTFrCBmPypzE+w5Le3ickZlteUyjlGC23eNHzEE/Un9azwd6JIBPHEs/dgP3b5UKLfw48jn1zWo4d1S9v74WoECDJcu7tt1VQMAnbnx9AOmK20FlqwaB+801ywCHxSYUcoVSdumGUbeZ386zJKR8bRG8gEc+X6Vcwlo2SQsYktpElEUsrnLLKHkLBDmPOMjyG/L0yOtavidrx7Kdp42t5VkJnhZfJnyceniwfcEeYNbeePUpkTMli0aZAYmUnlIUkfLsBlcfX61VdU1y4v7M28kSIWZ2dgx3LNzHby3FWaSneZdttjpfO9vfqpImHauFY7OCJLG1C475IgXGd+UFVBx/3NWssyOWxII6S4360tBxLcRSM3w0TqV5QhdsLuCcfUgVmPFl0xYtaRNzqFcFz4sYwT77daf4GpG1kDfnxDvu5LqJM+f7/ACt9HbxxTRIjhJVKljnPLiTkBP6D9KhrHefDILJIwzPIFWV+RccwyCc7dP4Cq9/SW5Mlw7W0bCYEBS7YTLBjj8xn8zQOJboxuslvExaPkzzEbkqSfz5Rt9fWoxhlQHbRseW47/uUPw0l75LLxlLG03du7i6Ers8YkJTHPJk8uMA588mq7Wz1bWZ9Rt1hljVQH7zIYnxEsScHpksf0FaytujjdFCGO1CuRNLWAFFFFFWVIrFI1Lu1Skbel5GAoAiXjtgUydE1llDLpd0QRkHk60g7VhYL+6v6Uzg4/KffikCN62LaFrX9lXf+CsbaDrZ/6Vd/4K1jhenIv6VHlX91f0odmXiPA/lPdnDz/S2f2Brf9lXf+CssHD2psy/FRpp6MwRJLtiis56KMA7n9B1JFaflX91f0rPZ3BtXJWGCVGxzRypzKcdPQ59waZwmtkR4ftOCy+Y8/wBKxdn+kX19qsssdkXt4ByT3LziGKAk+bsQudthufMA1cokhh1MaXNd2cNzCBJIluTcLyjkOQYgw8RHTr4um1c41PXNR1C2htJZUitIM9zawII4Y89SFG2T5k7n1pGO4njlMsc0iSEYLK2Dis+ehmqXFz7DLIZ+f9Jnx051BK6faWovp7qwsL7T5Ban71prpbfBAXbEhBOSmRjI38sb8/u9B1Oy1oaRqMAsbkgvmdsJyYJ5wwyGXAOCuc+WTWuMspZ2Mjkv85J3b61s4uINQXTV0247i9s4yWiiuou8ERPUodivvg4PnRQ0s1Nfq7EHx7+B7su9OxkDdAQsE2j6ijDurSe5jZQyTW8TvHIp6FSB/wCR0OKgNK1Q/wDS7/8A0sn8qxzXlzLIWMzoOgSNiiqPIADYCofEXP8AWZ/81v51fHXWzt5pdjms/wBlap/Zd/8A6WT+VH2Vqn9l3/8ApZP5Vg+IuP6zP/mt/Oj4i5/rM/8Amt/Ol/Ly803Y5rLLp+oQxNLNp95HGoyzvbuqj6kilayNPOylWnmYHqDIxB/jWOpGbVu0hNtyKKKKJMttI1YJHyak7elYXahTqLtWJmr1mrHT2TIryiinSRRRRSSRRRRSSRRRRSSRRRRSSRRRRSSRRRRSSRRRRSSX/9k=" alt="YTA Logo"></div>
+      <div class="brand-text">
+        <div class="org">Young Teachers Alliance</div>
+        <h1 id="orgNameHeader">YOUNG TEACHERS ALLIANCE</h1>
+        <div class="district-line" id="districtHeader">District Naushahro Feroze</div>
+      </div>
+    </div>
+    <div class="page-title">
+      <span>Taluka Election Membership Registration</span>
+      <button type="button" class="admin-link no-print" id="openAdminLogin">🔐 Admin</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <div id="configWarning" class="config-warning hidden">
+    <b>⚠ Setup needed:</b> This app is not yet connected to the central database. Paste the Supabase public anon/publishable key into <span class="mono">SUPABASE_CONFIG</span> near the top of this file before deployment.
+  </div>
+
+  <ol class="stepper" id="stepper" aria-label="Registration progress">
+    <li class="step active" data-step="1"><div class="dot">1</div><div class="label">Personal</div></li>
+    <li class="step" data-step="2"><div class="dot">2</div><div class="label">School</div></li>
+    <li class="step" data-step="3"><div class="dot">3</div><div class="label">Review</div></li>
+    <li class="step" data-step="4"><div class="dot">4</div><div class="label">Recipient</div></li>
+    <li class="step" data-step="5"><div class="dot">5</div><div class="label">Submit</div></li>
+  </ol>
+  <div class="step-bar"><div class="step-bar-fill" id="stepBarFill"></div></div>
+
+  <div class="info-card">
+    <div class="info-card-inner">
+      <div class="kicker">🗳️ Taluka Election Schedule</div>
+      <h2>Registration is open — act before the deadline</h2>
+      <div class="info-grid">
+        <div class="info-item"><span class="num" id="infoDays">4</span><span class="cap">Days to register — until <span id="infoDeadline">Thursday</span></span></div>
+        <div class="info-item"><span class="num">2</span><span class="cap">Days for nomination forms after registration closes</span></div>
+        <div class="info-item"><span class="num">🗳️</span><span class="cap">Election held after the nomination process completes</span></div>
+      </div>
+      <div class="warning-box"><b>⚠️ Important:</b> Only teachers who complete their YTA membership are eligible to submit nomination forms for Taluka-level posts and to take part in the election. All information provided will be verified through the <b>Biometric Checker</b>.</div>
+    </div>
+  </div>
+
+  <form id="regForm" novalidate>
+  <!-- STEP 1 -->
+  <section class="card step-panel" data-step-panel="1">
+    <span class="section-eyebrow">Step 1 of 5</span>
+    <h2>Teacher Information</h2>
+    <p class="sub">Apna naam father ke naam ke sath likhein (as per CNIC / service record).</p>
+    <div class="field" id="field-fullName">
+      <label for="fullName">Full Name<span class="req">*</span></label>
+      <input type="text" id="fullName" placeholder="e.g. Ayesha Bibi" autocomplete="name">
+      <div class="error-msg" id="err-fullName">⚠ Please enter the teacher's full name.</div>
+    </div>
+    <div class="field" id="field-fatherName">
+      <label for="fatherName">Father's Name / Surname<span class="req">*</span></label>
+      <input type="text" id="fatherName" placeholder="e.g. Ghulam Hussain" autocomplete="off">
+      <div class="error-msg" id="err-fatherName">⚠ Please enter father's name / surname.</div>
+    </div>
+    <div class="field" id="field-whatsapp">
+      <label for="whatsappNumber">WhatsApp Number<span class="req">*</span></label>
+      <input type="tel" id="whatsappNumber" placeholder="03001234567" inputmode="tel" autocomplete="tel">
+      <div class="hint">Accepted formats: 03001234567, +923001234567, 923001234567</div>
+      <div class="error-msg" id="err-whatsappNumber">⚠ Please enter a valid Pakistani WhatsApp number.</div>
+    </div>
+    <button type="button" class="btn btn-primary" id="toStep2">Next: School Information</button>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="card step-panel hidden" data-step-panel="2">
+    <span class="section-eyebrow">Step 2 of 5</span>
+    <h2>School Information</h2>
+    <p class="sub">School ka mukammal record darj karein.</p>
+    <div class="field" id="field-schoolName">
+      <label for="schoolName">School Name<span class="req">*</span></label>
+      <input type="text" id="schoolName" placeholder="e.g. GBPS Naushahro Feroze" autocomplete="off">
+      <div class="error-msg" id="err-schoolName">⚠ Please enter the school name.</div>
+    </div>
+    <div class="field" id="field-semis">
+      <label for="semisCode">School SEMIS Code<span class="req">*</span></label>
+      <input type="text" id="semisCode" placeholder="e.g. 401010123" inputmode="numeric">
+      <div class="hint">Numbers only, typically 6–9 digits.</div>
+      <div class="error-msg" id="err-semis">⚠ Please enter a valid SEMIS code (numbers only).</div>
+    </div>
+    <div class="field" id="field-taluka">
+      <label for="taluka">Taluka<span class="req">*</span></label>
+      <select id="taluka"><option value="" selected disabled>Select your Taluka</option></select>
+      <div class="error-msg" id="err-taluka">⚠ Please select your Taluka.</div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="backTo1">Back</button>
+      <button type="button" class="btn btn-primary" id="toStep3">Next: Review</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: REVIEW -->
+  <section class="card step-panel hidden" data-step-panel="3" style="padding:0; background:transparent; border:none; box-shadow:none;">
+    <div style="padding:0 2px;">
+      <span class="section-eyebrow">Step 3 of 5</span>
+      <h2 style="padding:0 2px;">Review Your Membership Registration</h2>
+      <p class="sub" style="padding:0 2px;">Check every detail carefully before continuing.</p>
+    </div>
+    <div class="ticket" id="ticketPreview">
+      <div class="ticket-main">
+        <div class="ticket-head">
+          <div class="ticket-org">
+            <div class="kicker">Young Teachers Alliance</div>
+            <h3>Membership Registration</h3>
+            <div class="district" id="pvDistrict">District Naushahro Feroze</div>
+          </div>
+          <div class="seal" aria-hidden="true"><img src="data:image/jpeg;base64,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" alt="YTA Official Seal"></div>
+        </div>
+        <div class="ticket-status"><span class="dot"></span> Pending Biometric Verification</div>
+        <div class="ticket-rows">
+          <div class="trow"><span class="k">Registration No.</span><span class="v mono" id="pvRegNo2">YTA-NF-—</span></div>
+          <div class="trow"><span class="k">Teacher Name</span><span class="v" id="pvName">—</span></div>
+          <div class="trow"><span class="k">Father's Name / Surname</span><span class="v" id="pvFather">—</span></div>
+          <div class="trow"><span class="k">School</span><span class="v" id="pvSchool">—</span></div>
+          <div class="trow"><span class="k">SEMIS Code</span><span class="v mono" id="pvSemis">—</span></div>
+          <div class="trow"><span class="k">Taluka</span><span class="v" id="pvTaluka">—</span></div>
+          <div class="trow"><span class="k">WhatsApp</span><span class="v mono" id="pvWhatsapp">—</span></div>
+        </div>
+        <p class="confirm-note">I confirm that the information provided above is correct and may be verified through the Biometric Checker.</p>
+      </div>
+      <div class="tear"></div>
+      <div class="ticket-stub">
+        <div><div class="stub-label">Registration No.</div><div class="stub-regno" id="pvRegNo">YTA-NF-—</div></div>
+        <div style="text-align:right;"><div class="stub-label">Date</div><div class="stub-regno" id="pvDate" style="font-size:12.5px;">—</div></div>
+      </div>
+    </div>
+    <p class="ticket-note">This registration number is assigned centrally and does not change once assigned.</p>
+    <div class="btn-row" style="margin-top:6px;">
+      <button type="button" class="btn btn-ghost" id="editFromReview">Edit Information</button>
+      <button type="button" class="btn btn-primary" id="confirmToStep4">
+        <span id="confirmBtnLabel">Confirm &amp; Continue</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- STEP 4: RECIPIENT SELECTION -->
+  <section class="card step-panel hidden" data-step-panel="4">
+    <span class="section-eyebrow">Step 4 of 5</span>
+    <h2>Select WhatsApp Recipient</h2>
+    <p class="sub">Choose who should receive your registration message on WhatsApp.</p>
+    <div class="mode-toggle no-print">
+      <button type="button" class="mode-btn active" id="modeSingleBtn">Select One Recipient</button>
+      <button type="button" class="mode-btn" id="modeMultiBtn">Send to Multiple Recipients</button>
+    </div>
+    <div id="recipientList"></div>
+    <div class="error-msg" id="err-recipients" style="margin-bottom:10px;">⚠ Please select at least one recipient.</div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="backTo3">Back</button>
+      <button type="button" class="btn btn-primary" id="toStep5">Continue</button>
+    </div>
+  </section>
+
+  <!-- STEP 5: SUBMIT / SEND -->
+  <section class="card step-panel hidden" data-step-panel="5">
+    <span class="section-eyebrow">Step 5 of 5</span>
+    <h2 id="step5Title">Send on WhatsApp</h2>
+    <p class="sub" id="step5Sub">WhatsApp requires your confirmation to send each message — tap the button below for each recipient.</p>
+    <div id="sendingBox">
+      <div class="queue-card">
+        <div class="queue-progress-label" id="queueProgressLabel">Recipient 1 of 1</div>
+        <div class="queue-recipient" id="queueRecipientName">—</div>
+        <div class="queue-recipient-num" id="queueRecipientNum">—</div>
+        <button type="button" class="btn btn-whatsapp" id="openWhatsappQueueBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.29-1.38a9.9 9.9 0 0 0 4.75 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.24 0 4.34.87 5.92 2.46a8.3 8.3 0 0 1 2.45 5.92c0 4.6-3.75 8.34-8.35 8.34a8.3 8.3 0 0 1-4.24-1.16l-.3-.18-3.14.82.84-3.06-.2-.32a8.27 8.27 0 0 1-1.27-4.42c0-4.6 3.75-8.4 8.29-8.4zm-3.6 4.13c-.17 0-.44.06-.67.31s-.88.86-.88 2.1.9 2.44 1.02 2.61 1.78 2.85 4.38 3.88c2.16.85 2.6.68 3.07.64.47-.05 1.5-.61 1.71-1.2.21-.59.21-1.1.15-1.2-.06-.11-.23-.17-.48-.29s-1.5-.74-1.73-.82c-.23-.08-.4-.11-.57.12s-.65.82-.8 1c-.15.17-.29.19-.55.06-.25-.12-1.06-.39-2.03-1.25-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.01-.39.11-.51.11-.11.25-.29.37-.44.12-.15.16-.25.24-.42.08-.17.04-.31-.02-.43-.06-.12-.57-1.4-.79-1.91-.2-.5-.41-.43-.57-.44-.15-.01-.32-.01-.49-.01z"/></svg>
+          <span id="queueBtnLabel">Open WhatsApp</span>
+        </button>
+        <div class="queue-dots" id="queueDots"></div>
+      </div>
+      <p class="hint-fallback">If WhatsApp did not open automatically, please use <a id="waWebLink" href="#" target="_blank" rel="noopener">WhatsApp Web</a> or install WhatsApp on this device.</p>
+      <button type="button" class="btn btn-ghost" id="nextRecipientBtn" style="margin-top:12px; display:none;">Next Recipient</button>
+    </div>
+    <div id="postSubmitBox" class="hidden">
+      <div class="success-wrap">
+        <div class="success-check"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 7" stroke="#146B47" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="font-weight:700; font-size:15px; color:var(--deep-blue-2);">✅ Registration Submitted</div>
+        <div style="font-size:12.5px; color:#6b7a78; margin-top:4px;">Registration No: <span class="mono" id="successRegNo">—</span></div>
+        <div class="status-pill pending" style="margin-top:8px;"><span></span>Status: Pending Biometric Verification</div>
+        <div style="font-size:12px; color:#6b7a78; margin-top:10px; max-width:340px; margin-left:auto; margin-right:auto; line-height:1.6;"><b>Important:</b> Your membership will remain pending until verified through the Biometric Checker. An administrator can now review it from any authorized device.</div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-ghost" id="printBtn">Print Registration</button>
+        <button type="button" class="btn btn-ghost" id="newRegBtn">Start New Registration</button>
+      </div>
+    </div>
+    <div class="btn-row no-print" style="margin-top:14px;" id="step5BackRow">
+      <button type="button" class="btn btn-ghost" id="backTo4">Back to Recipients</button>
+    </div>
+  </section>
+  </form>
+
+  <p class="privacy-note">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6l8-4z" stroke="#7a8983" stroke-width="1.6"/></svg>
+    <b>Privacy Notice:</b> Your registration details are saved securely to YTA's central membership database so that an authorized administrator can review and verify them from any device. Records are protected by admin sign-in — teachers cannot view other teachers' information, and your details are shared with WhatsApp only when you choose to send a recipient message. No unnecessary data is collected, and nothing is sold or handed to outside parties.
+  </p>
+  <button type="button" class="about-toggle no-print" id="aboutToggle">About this app / App information</button>
+  <div class="about-panel" id="aboutPanel">
+    <p style="margin:0 0 8px;"><b>YTA Digital Registration System</b> — a tool for collecting Taluka Election membership registrations for Young Teachers Alliance, District Naushahro Feroze. Registrations are stored centrally so any authorized administrator can review and verify them from any device; the registration form still requires an internet connection to save your details, and WhatsApp submission always requires internet.</p>
+    <p style="margin:0;">Developed by Syed Sibtain Raza · 📞 03002627199</p>
+  </div>
+
+  <div class="app-footer">
+    <div class="org-line">Young Teachers Alliance — District Naushahro Feroze</div>
+    <div class="sub-line">Digital Membership Registration System</div>
+    <div class="divider"></div>
+    <div class="dev-credit">Developed by <b>Syed Sibtain Raza</b><br>📞 03002627199</div>
+  </div>
+</div>
+</div>
+<!-- /#teacherApp -->
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal-overlay hidden no-print" id="adminLoginOverlay">
+  <div class="modal">
+    <div class="admin-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
+    <h3>🔐 Administrator Login</h3>
+    <p>Sign in with your YTA administrator account, created in Supabase Authentication. Each authorized administrator should use their own account.</p>
+    <div class="admin-login-field"><label for="adminEmail">Admin Email</label><input type="email" id="adminEmail" autocomplete="username" placeholder="admin@example.com"></div>
+    <div class="admin-login-field"><label for="adminPassword">Password</label><input type="password" id="adminPassword" autocomplete="current-password" placeholder="Enter your password"></div>
+    <div class="admin-error" id="adminLoginError">⚠ Incorrect email or password.</div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button type="button" class="btn btn-ghost" id="cancelAdminLogin">Cancel</button>
+      <button type="button" class="btn btn-primary" id="submitAdminLogin"><span id="adminLoginBtnLabel">Login</span></button>
+    </div>
+    <div class="security-note">For genuine multi-admin, multi-device security, records are stored in Supabase behind row-level security policies — teachers can submit a registration but cannot read, edit, or delete any record. Only signed-in administrators can view, verify, or export the database.</div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="adminApp" class="hidden no-print">
+  <div class="admin-header">
+    <div class="title">
+      <div class="admin-icon" style="margin-bottom:0; background:rgba(255,255,255,0.14);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="#fff" stroke-width="1.8"/></svg></div>
+      <div><h1>🔐 Admin Dashboard</h1><div class="tag" id="adminTagLine">YTA · Naushahro Feroze</div></div>
+    </div>
+    <button type="button" class="logout-btn" id="adminLogoutBtn">Logout</button>
+  </div>
+
+  <div class="app" style="padding-top:18px;">
+    <div style="margin-bottom:14px;"><span class="status-pill live" id="connStatusPill"><span></span>Live — synced across all devices</span></div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><span class="n" id="statTotal">0</span><span class="l">Total Registrations</span></div>
+      <div class="stat-card"><span class="n" id="statPending">0</span><span class="l">Pending Verification</span></div>
+      <div class="stat-card"><span class="n" id="statVerified">0</span><span class="l">Verified</span></div>
+      <div class="stat-card"><span class="n" id="statTalukaCount">0</span><span class="l">Talukas</span></div>
+    </div>
+
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:14.5px; margin-bottom:12px;">Registration Trend — Last 14 Days</h2>
+      <div style="position:relative; height:180px;"><canvas id="trendChartCanvas"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:14.5px;">Taluka-wise Summary</h2>
+      <div class="taluka-table-wrap">
+        <table class="taluka-table">
+          <thead><tr><th>Taluka</th><th style="text-align:center;">Total</th><th style="text-align:center;">Pending</th><th style="text-align:center;">Verified</th></tr></thead>
+          <tbody id="talukaSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px;">
+      <h2 style="font-size:14.5px;">Search &amp; Filter Records</h2>
+      <div class="admin-filters">
+        <input type="text" id="adminSearch" placeholder="Search name, SEMIS, reg no., WhatsApp, or school">
+        <select id="adminStatusFilter">
+          <option value="all">All Records</option>
+          <option value="pending">Pending Verification</option>
+          <option value="verified">Verified</option>
+        </select>
+      </div>
+      <div class="filters-row2" style="margin-bottom:14px;">
+        <select id="adminFilterTaluka"><option value="">All Talukas</option></select>
+        <div id="talukaMiniSummary" style="font-size:11.5px; color:#6b7a78; display:flex; align-items:center;">—</div>
+      </div>
+      <div class="admin-actions-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportAllBtn">Export All Records</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportVerifiedBtn">Export Verified Members</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportPendingBtn">Export Pending Members</button>
+      </div>
+      <div class="admin-actions-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportAllPdfBtn">📄 PDF — All Records</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminExportVerifiedPdfBtn">📄 PDF — Verified</button>
+      </div>
+      <div class="admin-actions-row">
+        <button type="button" class="btn btn-ghost btn-sm" id="adminPrintVerifiedBtn">Print Verified List</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminPrintAllBtn">Print All Records</button>
+        <button type="button" class="btn btn-danger-outline btn-sm" id="adminClearAllBtn">Clear All Records</button>
+      </div>
+    </div>
+
+    <div class="admin-section-head"><h2>🟡 Pending Verification</h2><span class="count-badge" id="pendingCountBadge">0</span></div>
+    <div class="admin-actions-row no-print" style="margin-bottom:8px;">
+      <button type="button" class="btn btn-ghost btn-sm" id="selectAllPendingBtn">☑ Select All</button>
+      <button type="button" class="btn btn-primary btn-sm" id="bulkVerifyBtn" disabled>✓ Verify Selected (<span id="bulkVerifyCount">0</span>)</button>
+    </div>
+    <div id="pendingList"></div>
+
+    <div class="admin-section-head"><h2>🟢 Verified Members</h2><span class="count-badge" id="verifiedCountBadge">0</span></div>
+    <div id="verifiedList"></div>
+
+    <div class="records-toggle no-print" id="activityToggle" role="button" tabindex="0" aria-expanded="false">
+      <div><div style="font-weight:700; font-size:13.5px; color:var(--deep-blue-2);">Admin Activity Log</div><div style="font-size:11.5px; color:#6b7a78; margin-top:2px;" id="activityCountLabel">0 actions recorded</div></div>
+      <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b7a78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="records-panel" id="activityPanel"><div class="activity-log" id="activityLogList"></div></div>
+  </div>
+
+  <div class="app-footer">
+    <div class="org-line">YTA Admin Panel — District Naushahro Feroze</div>
+    <div class="divider"></div>
+    <div class="dev-credit">Developed by <b>Syed Sibtain Raza</b><br>📞 03002627199</div>
+  </div>
+</div>
+
+<!-- VERIFY MODAL -->
+<div class="modal-overlay hidden no-print" id="verifyOverlay">
+  <div class="modal">
+    <h3 style="color:var(--emerald);">✓ Verify Teacher</h3>
+    <p>Are you sure that this teacher's information has been successfully verified through the Biometric Checker?<br><br>Teacher: <span class="record-name" id="verifyRecordName">—</span><br>Registration: <span class="mono" id="verifyRecordRegNo">—</span></p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelVerify">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirmVerify" style="background:var(--emerald);">Confirm Verification</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVERT MODAL -->
+<div class="modal-overlay hidden no-print" id="revertOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">↩ Revert Verification?</h3>
+    <p>This teacher will be moved back to the pending verification list.<br><br>Teacher: <span class="record-name" id="revertRecordName">—</span><br>Registration: <span class="mono" id="revertRecordRegNo">—</span></p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelRevert">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmRevert">Revert Verification</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay hidden no-print" id="deleteOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠️ Delete Record</h3>
+    <p>Are you sure you want to permanently delete:<br><span class="record-name" id="deleteRecordName">—</span><br>Registration: <span class="mono" id="deleteRecordRegNo">—</span></p>
+    <p style="color:var(--danger); font-weight:600; font-size:12.5px;">This action cannot be undone.</p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelDelete">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmDelete">Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR ALL MODAL -->
+<div class="modal-overlay hidden no-print" id="clearAllOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠️ Clear All Records</h3>
+    <p>This will permanently delete <b id="clearAllCount">0</b> registration record(s) from the central database, for every admin and device. This action cannot be undone.</p>
+    <p>Type <b class="mono">DELETE ALL</b> below to confirm:</p>
+    <input type="text" class="type-confirm" id="clearAllConfirmInput" placeholder="Type DELETE ALL">
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelClearAll">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmClearAll" disabled>Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW RECORD MODAL -->
+<div class="modal-overlay hidden no-print" id="viewRecordOverlay">
+  <div class="modal">
+    <h3>Registration Details</h3>
+    <div class="ticket-rows" id="viewRecordRows" style="margin-bottom:12px;"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="closeViewRecord">Close</button>
+      <button type="button" class="btn btn-primary" id="printFromView">Print</button>
+    </div>
+  </div>
+</div>
+
+<div id="printSheet"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- PUBLIC VERIFICATION STATUS PAGE (shown when URL has ?verify=REGNO) -->
+<div id="verifyStatusPage" class="hidden" style="min-height:100vh; background:var(--paper); display:flex; align-items:center; justify-content:center; padding:24px;">
+  <div class="card" style="max-width:380px; width:100%; text-align:center;">
+    <div class="brand-mark" aria-hidden="true" style="width:56px; height:56px; margin:0 auto 14px;"><img src="assets/yta-logo.jpg" alt="YTA Logo"></div>
+    <h2 style="margin:0 0 4px;">Registration Status</h2>
+    <p class="sub" id="verifyRegNoLabel" style="margin-bottom:18px;">—</p>
+    <div id="verifyStatusLoading">
+      <div class="spinner" style="border-color:rgba(14,59,92,0.25); border-top-color:var(--deep-blue);"></div>
+      <p style="font-size:12.5px; color:#7a8983; margin-top:10px;">Checking…</p>
+    </div>
+    <div id="verifyStatusResult" class="hidden">
+      <div class="status-pill" id="verifyStatusPill" style="font-size:13px; padding:8px 16px; margin-bottom:12px;"><span></span><span id="verifyStatusText">—</span></div>
+      <div style="font-size:16px; font-weight:700; color:var(--deep-blue-2);" id="verifyStatusName">—</div>
+    </div>
+    <div id="verifyStatusNotFound" class="hidden" style="font-size:13px; color:var(--danger);">No registration found with this number.</div>
+    <button type="button" class="btn btn-ghost" style="margin-top:22px;" id="verifyStatusBackBtn">Back to Registration Form</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   SECTION 1: CONFIGURATION — Non-programmers edit only here.
+============================================================ */
+const CONFIG = {
+  organizationName: "Young Teachers Alliance",
+  district: "Naushahro Feroze",
+  developerName: "Syed Sibtain Raza",
+  developerPhone: "03002627199",
+  membershipDeadline: "Thursday",
+  membershipDays: 4,
+  talukas: ["Naushahro Feroze","Moro","Kandiaro","Mehrabpur","Bhiria"]
+};
+
+// ADMIN: Replace with the official YTA WhatsApp receiving numbers.
+// Format: country code + number, no plus sign, e.g. "923001234567".
+const WHATSAPP_NUMBERS = [
+  { name: "District YTA Office",  number: "923XXXXXXXXX" },
+  { name: "YTA Coordinator",      number: "923XXXXXXXXX" },
+  { name: "YTA Membership Team",  number: "923XXXXXXXXX" }
+];
+
+/* ============================================================
+   SECTION 1B: SUPABASE CONFIGURATION
+   The project URL is fixed for this YTA project. Paste the PUBLIC
+   anon/publishable key from Supabase Project Settings > API below.
+   NEVER paste a service_role/secret key into this HTML file.
+============================================================ */
+const SUPABASE_CONFIG = {
+  url: "https://odpzipgdwpqgoddtkvve.supabase.co",
+  anonKey: "sb_publishable_uI6fpg3rQxfJJJemjooG8A_hRbrz17Y"
+};
+const ADMIN_SESSION_MINUTES = 15;
+
+/* ============================================================
+   STATE
+============================================================ */
+let currentStep = 1;
+let currentRecord = null;         // record currently being registered by this teacher
+let recipientMode = "single";
+let selectedRecipients = [];
+let sendQueue = [];
+let sendQueueIndex = 0;
+let pendingDeleteRegNo = null;
+let pendingVerifyRegNo = null;
+let pendingRevertRegNo = null;
+let adminInactivityTimer = null;
+let recordsCache = [];            // live copy of all registrations, admin-only (via onSnapshot)
+let activityCache = [];           // live copy of activity log, admin-only
+let unsubRegistrations = null;
+let unsubActivity = null;
+let lastAdminActivityAt = Date.now();
+let supabaseReady = false;
+let supabase = null;
+let currentAdmin = null;
+let adminRole = null;
+let adminEmail = null;
+let recipientListCache = [];
+
+/* ============================================================
+   DOM HELPERS
+============================================================ */
+const $ = (id) => document.getElementById(id);
+function showToast(msg, isError){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.toggle("error", !!isError);
+  t.classList.add("show");
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=> t.classList.remove("show"), 3400);
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function maskNumber(n){
+  const clean = String(n||"").replace(/\s/g,"");
+  if(clean.length <= 7) return clean;
+  return clean.slice(0,5) + "•".repeat(Math.max(3, clean.length-7)) + clean.slice(-2);
+}
+
+/* ============================================================
+   SUPABASE INIT
+============================================================ */
+const isConfigured = SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes("PASTE_YOUR_");
+if(isConfigured && window.supabase){
+  try{
+    supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+      auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+    });
+    supabaseReady = true;
+  }catch(e){
+    console.error("Supabase init failed:", e);
+    supabaseReady = false;
+  }
+} else {
+  $("configWarning").classList.remove("hidden");
+}
+
+/* ============================================================
+   INIT — apply CONFIG to the page
+============================================================ */
+function applyConfig(){
+  $("orgNameHeader").textContent = CONFIG.organizationName.toUpperCase();
+  $("districtHeader").textContent = "District " + CONFIG.district;
+  $("infoDays").textContent = CONFIG.membershipDays;
+  $("infoDeadline").textContent = CONFIG.membershipDeadline;
+  $("pvDistrict").textContent = "District " + CONFIG.district;
+  $("adminTagLine").textContent = "YTA · " + CONFIG.district;
+
+  const talukaSelect = $("taluka");
+  const adminFilterTaluka = $("adminFilterTaluka");
+  CONFIG.talukas.forEach(t=>{
+    const o1 = document.createElement("option"); o1.value = t; o1.textContent = t; talukaSelect.appendChild(o1);
+    const o2 = document.createElement("option"); o2.value = t; o2.textContent = t; adminFilterTaluka.appendChild(o2);
+  });
+}
+
+/* ============================================================
+   VALIDATION
+============================================================ */
+function normalizePkNumber(raw){
+  let v = (raw || "").trim().replace(/[\s\-()]/g,"");
+  if(v.startsWith("+92")) v = v.slice(1);
+  else if(v.startsWith("0092")) v = v.slice(2);
+  else if(v.startsWith("0") && v.length === 11) v = "92" + v.slice(1);
+  else if(v.startsWith("92")) { /* fine */ }
+  else if(v.length === 10 && v.startsWith("3")) v = "92" + v;
+  return v;
+}
+function isValidPkNumber(raw){ return /^923\d{9}$/.test(normalizePkNumber(raw)); }
+function isValidSemis(raw){ return /^\d{4,12}$/.test((raw||"").trim()); }
+function setFieldError(fieldId, show){
+  const field = $("field-" + fieldId), err = $("err-" + fieldId);
+  if(!field || !err) return;
+  field.classList.toggle("invalid", show);
+  err.classList.toggle("show", show);
+}
+function validateStep1(){
+  let ok = true;
+  const fullName = $("fullName").value.trim(), fatherName = $("fatherName").value.trim(), whatsapp = $("whatsappNumber").value.trim();
+  setFieldError("fullName", !fullName); if(!fullName) ok=false;
+  setFieldError("fatherName", !fatherName); if(!fatherName) ok=false;
+  const waValid = whatsapp && isValidPkNumber(whatsapp);
+  setFieldError("whatsappNumber", !waValid); if(!waValid) ok=false;
+  return ok;
+}
+function validateStep2(){
+  let ok = true;
+  const schoolName = $("schoolName").value.trim(), semis = $("semisCode").value.trim(), taluka = $("taluka").value;
+  setFieldError("schoolName", !schoolName); if(!schoolName) ok=false;
+  const semisValid = semis && isValidSemis(semis);
+  setFieldError("semis", !semisValid); if(!semisValid) ok=false;
+  setFieldError("taluka", !taluka); if(!taluka) ok=false;
+  return ok;
+}
+["fullName","fatherName","whatsappNumber","schoolName","semisCode"].forEach(id=>{
+  $(id).addEventListener("input", ()=> setFieldError(id, false));
+});
+$("taluka").addEventListener("change", ()=> setFieldError("taluka", false));
+
+/* ============================================================
+   STEP NAVIGATION
+============================================================ */
+const stepFillPct = {1:6, 2:30, 3:54, 4:78, 5:100};
+function goToStep(n){
+  document.querySelectorAll(".step-panel").forEach(p=>{
+    p.classList.toggle("hidden", parseInt(p.dataset.stepPanel,10) !== n);
+  });
+  document.querySelectorAll(".step").forEach(s=>{
+    const sn = parseInt(s.dataset.step,10);
+    s.classList.toggle("active", sn === n);
+    s.classList.toggle("done", sn < n);
+  });
+  $("stepBarFill").style.width = stepFillPct[n] + "%";
+  currentStep = n;
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+$("toStep2").addEventListener("click", ()=>{ if(validateStep1()) goToStep(2); else showToast("Please fix the highlighted fields.", true); });
+$("backTo1").addEventListener("click", ()=> goToStep(1));
+$("toStep3").addEventListener("click", ()=>{
+  if(validateStep2()){ fillPreview(); goToStep(3); }
+  else showToast("Please fix the highlighted fields.", true);
+});
+$("editFromReview").addEventListener("click", ()=> goToStep(2));
+$("backTo4").addEventListener("click", ()=> goToStep(4));
+
+/* ============================================================
+   PREVIEW / TICKET FILL
+============================================================ */
+function currentFormData(){
+  return {
+    fullName: $("fullName").value.trim(),
+    fatherName: $("fatherName").value.trim(),
+    whatsappNorm: normalizePkNumber($("whatsappNumber").value.trim()),
+    schoolName: $("schoolName").value.trim(),
+    semisCode: $("semisCode").value.trim(),
+    taluka: $("taluka").value
+  };
+}
+function fillPreview(){
+  const d = currentFormData();
+  $("pvName").textContent = d.fullName || "—";
+  $("pvFather").textContent = d.fatherName || "—";
+  $("pvSchool").textContent = d.schoolName || "—";
+  $("pvSemis").textContent = d.semisCode || "—";
+  $("pvTaluka").textContent = d.taluka || "—";
+  $("pvWhatsapp").textContent = d.whatsappNorm ? ("+" + d.whatsappNorm) : "—";
+  $("pvDate").textContent = new Date().toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
+  $("pvRegNo").textContent = "Assigned on confirm";
+  $("pvRegNo2").textContent = "Assigned on confirm";
+}
+
+/* ============================================================
+   SECTION 5: CENTRAL DATABASE — SUPABASE DATA LAYER
+   Tables created by the YTA Supabase setup:
+   memberships, admin_profiles, admin_activity_logs, whatsapp_recipients
+============================================================ */
+function formatRegNo(n){ return "YTA-NF-" + String(n).padStart(4,"0"); }
+
+function mapMember(row){
+  if(!row) return null;
+  const createdAt = row.created_at || new Date().toISOString();
+  const verifiedDate = row.verification_date || null;
+  const verifiedTime = row.verification_time || null;
+  return {
+    id: row.id,
+    regNo: row.registration_number || "",
+    dateTime: createdAt,
+    fullName: row.full_name || "",
+    fatherName: row.father_name || "",
+    schoolName: row.school_name || "",
+    semisCode: row.semis_code || "",
+    taluka: row.taluka || "",
+    whatsappNumber: row.whatsapp_number || "",
+    verificationStatus: String(row.verification_status || "pending").toLowerCase() === "verified" ? "Verified" : "Pending",
+    verifiedDate: verifiedDate ? new Date(verifiedDate + "T00:00:00").toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"}) : null,
+    verifiedTime: verifiedTime || null,
+    verifiedBy: row.verified_by || null,
+    verifiedByName: row.verified_by_name || null,
+    recipients: Array.isArray(row.whatsapp_recipients) ? row.whatsapp_recipients : [],
+    sentRecipients: Array.isArray(row.whatsapp_recipients) ? row.whatsapp_recipients : [],
+    whatsappSentAt: row.whatsapp_submitted_at || null
+  };
+}
+
+function memberPayload(d, regNo){
+  return {
+    registration_number: regNo,
+    full_name: d.fullName,
+    father_name: d.fatherName,
+    whatsapp_number: "+" + d.whatsappNorm,
+    school_name: d.schoolName,
+    semis_code: d.semisCode,
+    taluka: d.taluka,
+    verification_status: "pending",
+    whatsapp_recipients: [],
+    whatsapp_submitted_at: null
+  };
+}
+
+async function getNextRegistrationNumber(){
+  const {data,error}=await supabase.rpc("next_yta_registration_number");
+  if(error) throw error;
+  const n = typeof data === "object" && data !== null
+    ? (data.value ?? data.next_number ?? data.registration_number)
+    : data;
+  if(!n || !Number(n)) throw new Error("Could not generate a central registration number.");
+  return Number(n);
+}
+
+async function logActivity(actionType, regNo, teacherName, details={}){
+  if(!supabase || !currentAdmin) return;
+  try{
+    const payload = {
+      admin_id: currentAdmin.id,
+      admin_name: currentAdmin.full_name || adminEmail || "Administrator",
+      action: actionType,
+      registration_number: regNo || null,
+      teacher_name: teacherName || null,
+      timestamp: new Date().toISOString()
+    };
+    await supabase.from("admin_activity_logs").insert(payload);
+  }catch(e){ console.warn("Activity log write failed:", e.message); }
+}
+
+/* Confirm review -> create the record centrally, move to recipient step */
+$("confirmToStep4").addEventListener("click", async ()=>{
+  if(!validateStep1()){ goToStep(1); showToast("Please complete personal information first.", true); return; }
+  if(!validateStep2()){ goToStep(2); showToast("Please complete school information first.", true); return; }
+  if(!supabaseReady){ showToast("This app isn't connected to Supabase yet. Please add the public key in SUPABASE_CONFIG.", true); return; }
+
+  if(!currentRecord){
+    const btn = $("confirmToStep4");
+    btn.disabled = true;
+    $("confirmBtnLabel").innerHTML = '<span class="spinner"></span> Saving...';
+    try{
+      const n = await getNextRegistrationNumber();
+      const regNo = formatRegNo(n);
+      const d = currentFormData();
+      const payload = memberPayload(d, regNo);
+
+      // IMPORTANT: do NOT use .select() here. Teachers are anonymous and
+      // the memberships SELECT policy intentionally blocks them from reading
+      // membership rows. INSERT must succeed before any success UI appears.
+      const {error} = await supabase.from("memberships").insert(payload);
+      if(error) throw error;
+
+      currentRecord = {
+        id: null,
+        regNo,
+        dateTime: new Date().toISOString(),
+        fullName: d.fullName,
+        fatherName: d.fatherName,
+        schoolName: d.schoolName,
+        semisCode: d.semisCode,
+        taluka: d.taluka,
+        whatsappNumber: "+" + d.whatsappNorm,
+        verificationStatus: "Pending",
+        verifiedDate: null,
+        verifiedTime: null,
+        verifiedBy: null,
+        recipients: [],
+        sentRecipients: [],
+        whatsappSentAt: null
+      };
+      $("pvRegNo").textContent = regNo; $("pvRegNo2").textContent = regNo;
+      renderRecipientSelector();
+      goToStep(4);
+    }catch(e){
+      console.error(e);
+      showToast("Registration Could Not Be Submitted — " + (e.message || "Please check your internet connection and try again."), true);
+    }finally{
+      btn.disabled = false;
+      $("confirmBtnLabel").textContent = "Confirm & Continue";
+    }
+  } else {
+    renderRecipientSelector();
+    goToStep(4);
+  }
+});
+
+/* ============================================================
+   STEP 4: RECIPIENT SELECTION
+============================================================ */
+function renderRecipientSelector(){
+  const list = $("recipientList");
+  const recipients = recipientListCache.length ? recipientListCache : WHATSAPP_NUMBERS;
+  list.innerHTML = recipients.map((r, i)=>{
+    const checked = recipientMode === "single" ? (i===0 ? "checked" : "") : "";
+    const type = recipientMode === "single" ? "radio" : "checkbox";
+    return `
+    <label class="recipient-item" data-idx="${i}">
+      <input type="${type}" name="recipientChoice" value="${i}" ${checked}>
+      <div class="wa-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.29-1.38a9.9 9.9 0 0 0 4.75 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg></div>
+      <div class="rinfo"><div class="rname2">${escapeHtml(r.name)}</div><div class="rnum">${escapeHtml(maskNumber(r.number))}</div></div>
+    </label>`;
+  }).join("");
+  list.querySelectorAll(".recipient-item input").forEach(inp=> inp.addEventListener("change", updateRecipientSelectionUI));
+  updateRecipientSelectionUI();
+}
+function updateRecipientSelectionUI(){
+  $("recipientList").querySelectorAll(".recipient-item").forEach(item=>{
+    item.classList.toggle("selected", item.querySelector("input").checked);
+  });
+  setFieldError("recipients", false);
+}
+$("modeSingleBtn").addEventListener("click", ()=>{
+  recipientMode = "single";
+  $("modeSingleBtn").classList.add("active"); $("modeMultiBtn").classList.remove("active");
+  renderRecipientSelector();
+});
+$("modeMultiBtn").addEventListener("click", ()=>{
+  recipientMode = "multi";
+  $("modeMultiBtn").classList.add("active"); $("modeSingleBtn").classList.remove("active");
+  renderRecipientSelector();
+});
+$("toStep5").addEventListener("click", async ()=>{
+  const checked = Array.from($("recipientList").querySelectorAll("input:checked"));
+  if(!checked.length){ setFieldError("recipients", true); showToast("Please select at least one recipient.", true); return; }
+  const recipients = recipientListCache.length ? recipientListCache : WHATSAPP_NUMBERS;
+  selectedRecipients = checked.map(inp => recipients[parseInt(inp.value,10)]);
+  currentRecord.recipients = selectedRecipients;
+  // Teacher is anonymous and cannot UPDATE memberships directly.
+  // The selected recipients are retained in memory and will be submitted
+  // through the dedicated server-side RPC in the next step.
+  startSendQueue();
+  goToStep(5);
+});
+
+/* ============================================================
+   SECTION 6: WHATSAPP MESSAGE BUILDER
+============================================================ */
+function buildMessage(record){
+  return (
+`YOUNG TEACHERS ALLIANCE (YTA)
+District ${CONFIG.district}
+
+Taluka Election Membership Registration
+
+Registration No: ${record.regNo}
+
+Teacher Name: ${record.fullName}
+
+Father's Name / Surname: ${record.fatherName}
+
+School: ${record.schoolName}
+
+SEMIS Code: ${record.semisCode}
+
+Taluka: ${record.taluka}
+
+WhatsApp Number: ${record.whatsappNumber}
+
+Verification Status: Pending Biometric Verification
+
+I confirm that the information provided above is correct and may be verified through the Biometric Checker.
+
+Submitted for YTA Membership Registration.`
+  );
+}
+
+/* ============================================================
+   STEP 5: SEQUENTIAL SEND QUEUE — WhatsApp needs a tap per
+   recipient, so the app never sends automatically.
+============================================================ */
+function startSendQueue(){
+  sendQueue = selectedRecipients.slice();
+  sendQueueIndex = 0;
+  $("sendingBox").classList.remove("hidden");
+  $("postSubmitBox").classList.add("hidden");
+  $("step5BackRow").classList.remove("hidden");
+  $("nextRecipientBtn").style.display = "none";
+  renderQueueState();
+}
+function renderQueueState(){
+  const total = sendQueue.length;
+  const r = sendQueue[sendQueueIndex];
+  $("queueProgressLabel").textContent = `Recipient ${sendQueueIndex+1} of ${total}`;
+  $("queueRecipientName").textContent = r.name;
+  $("queueRecipientNum").textContent = maskNumber(r.number);
+  $("queueBtnLabel").textContent = "Open WhatsApp — " + r.name;
+  $("openWhatsappQueueBtn").disabled = false;
+  $("queueDots").innerHTML = sendQueue.map((_, i)=>{
+    const cls = i < sendQueueIndex ? "sent" : (i === sendQueueIndex ? "current" : "");
+    return `<span class="queue-dot ${cls}"></span>`;
+  }).join("");
+}
+$("openWhatsappQueueBtn").addEventListener("click", async ()=>{
+  const r = sendQueue[sendQueueIndex];
+  const message = buildMessage(currentRecord);
+  const encoded = encodeURIComponent(message);
+  const target = (r.number || "").replace(/\D/g,"");
+  const isPlaceholder = !target || /X/i.test(r.number);
+  const waUrl = isPlaceholder ? ("https://wa.me/?text=" + encoded) : ("https://wa.me/" + target + "?text=" + encoded);
+  $("waWebLink").href = waUrl;
+  try{ window.open(waUrl, "_blank"); }catch(e){ /* pop-up blocked — fallback link remains visible */ }
+  if(isPlaceholder) showToast("Note: admin hasn't set this number yet — choose a recipient in WhatsApp.", false);
+  else showToast("Opening WhatsApp — " + r.name, false);
+
+  const nowIso = new Date().toISOString();
+  currentRecord.sentRecipients.push({ name:r.name, number:r.number, sentAt: nowIso });
+  currentRecord.whatsappSentAt = nowIso;
+  // Teachers are anonymous and cannot UPDATE memberships directly (RLS
+  // blocks it). This SECURITY DEFINER RPC lets an anonymous caller append
+  // ONLY to whatsapp_recipients/whatsapp_submitted_at for this one row,
+  // matched by registration_number — it cannot touch anything else.
+  if(supabaseReady && currentRecord.regNo){
+    try{
+      const {error: rpcError} = await supabase.rpc("record_yta_whatsapp_send", {
+        p_registration_number: currentRecord.regNo,
+        p_recipient_name: r.name,
+        p_recipient_number: r.number
+      });
+      if(rpcError) console.warn("Could not record WhatsApp send history:", rpcError.message);
+    }catch(e){ console.warn("Could not record WhatsApp send history:", e.message); }
+  }
+
+  $("openWhatsappQueueBtn").disabled = true;
+  if(sendQueueIndex < sendQueue.length - 1){
+    $("nextRecipientBtn").style.display = "block";
+    $("nextRecipientBtn").textContent = "Next Recipient — " + sendQueue[sendQueueIndex+1].name;
+  } else {
+    finishSendQueue();
+  }
+});
+$("nextRecipientBtn").addEventListener("click", ()=>{
+  sendQueueIndex += 1;
+  $("nextRecipientBtn").style.display = "none";
+  renderQueueState();
+});
+function finishSendQueue(){
+  $("sendingBox").classList.add("hidden");
+  $("postSubmitBox").classList.remove("hidden");
+  $("step5BackRow").classList.add("hidden");
+  $("successRegNo").textContent = currentRecord.regNo;
+}
+
+/* ============================================================
+   NEW REGISTRATION
+============================================================ */
+$("newRegBtn").addEventListener("click", ()=>{
+  $("regForm").reset();
+  ["fullName","fatherName","whatsappNumber","schoolName","semisCode","taluka"].forEach(id=>setFieldError(id,false));
+  currentRecord = null; selectedRecipients = []; sendQueue = []; sendQueueIndex = 0;
+  recipientMode = "single";
+  $("modeSingleBtn").classList.add("active"); $("modeMultiBtn").classList.remove("active");
+  $("sendingBox").classList.remove("hidden");
+  $("postSubmitBox").classList.add("hidden");
+  $("step5BackRow").classList.remove("hidden");
+  goToStep(1);
+});
+$("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle("open"));
+
+/* ============================================================
+   SECTION 10: PRINT
+============================================================ */
+function statusLabel(r){ return r.verificationStatus === "Verified" ? "Verified" : "Pending Biometric Verification"; }
+const VERIFY_BASE_URL = "https://thehks199.github.io/YTA-Digital-Registration./";
+async function buildQrDataUrl(regNo){
+  try{
+    if(!window.QRCode || !regNo) return "";
+    const url = VERIFY_BASE_URL + "?verify=" + encodeURIComponent(regNo);
+    return await QRCode.toDataURL(url, {width:140, margin:1, color:{dark:"#0E3B5C", light:"#FFFFFF"}});
+  }catch(e){ console.warn("QR generation failed:", e.message); return ""; }
+}
+async function buildPrintSheet(record){
+  const verifiedBlock = record.verificationStatus === "Verified"
+    ? `<tr><td style="padding:8px 0;color:#555;">Verified Date</td><td style="padding:8px 0;">${escapeHtml(record.verifiedDate||"")} ${escapeHtml(record.verifiedTime||"")}</td></tr>
+       <tr><td style="padding:8px 0;color:#555;">Verified By</td><td style="padding:8px 0;">${escapeHtml(record.verifiedByName||record.verifiedBy||"")}</td></tr>` : "";
+  const qrDataUrl = await buildQrDataUrl(record.regNo);
+  const qrBlock = qrDataUrl ? `<div style="text-align:center;margin-top:24px;">
+        <img src="${qrDataUrl}" alt="Verification QR Code" style="width:100px;height:100px;">
+        <div style="font-size:10px;color:#888;margin-top:4px;">Scan to verify this registration</div>
+      </div>` : "";
+  return `
+    <div style="max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
+      <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
+        <img src="data:image/jpeg;base64,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" alt="YTA Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
+        <div style="font-size:11px;letter-spacing:2px;color:#146B47;font-weight:700;">YOUNG TEACHERS ALLIANCE</div>
+        <div style="font-size:13px;color:#555;">District ${CONFIG.district}</div>
+        <h2 style="margin:8px 0 0;">Taluka Election Membership Registration</h2>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px 0;color:#555;width:45%;">Registration No.</td><td style="padding:8px 0;font-weight:700;">${escapeHtml(record.regNo)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Date</td><td style="padding:8px 0;">${new Date(record.dateTime).toLocaleString()}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Teacher Name</td><td style="padding:8px 0;">${escapeHtml(record.fullName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Father's Name / Surname</td><td style="padding:8px 0;">${escapeHtml(record.fatherName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">School</td><td style="padding:8px 0;">${escapeHtml(record.schoolName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">SEMIS Code</td><td style="padding:8px 0;">${escapeHtml(record.semisCode)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Taluka</td><td style="padding:8px 0;">${escapeHtml(record.taluka)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">WhatsApp Number</td><td style="padding:8px 0;">${escapeHtml(record.whatsappNumber)}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Verification Status</td><td style="padding:8px 0;">${escapeHtml(statusLabel(record))}</td></tr>
+        ${verifiedBlock}
+      </table>
+      <div style="margin-top:50px;display:flex;justify-content:space-between;">
+        <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Teacher Signature</div>
+        <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Verification / YTA Official</div>
+      </div>
+      ${qrBlock}
+      <div style="margin-top:24px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
+    </div>`;
+}
+$("printBtn").addEventListener("click", async ()=>{
+  if(!currentRecord){ showToast("Nothing to print yet.", true); return; }
+  $("printSheet").innerHTML = await buildPrintSheet(currentRecord);
+  window.print();
+});
+
+/* ============================================================
+   SECTION 7: ADMIN AUTHENTICATION — SUPABASE AUTH
+============================================================ */
+$("openAdminLogin").addEventListener("click", async ()=>{
+  if(!supabaseReady){ showToast("Supabase is not configured yet. Add the public key first.", true); return; }
+  $("adminEmail").value = ""; $("adminPassword").value = "";
+  $("adminLoginError").classList.remove("show");
+  $("adminLoginOverlay").classList.remove("hidden");
+  $("adminEmail").focus();
+});
+$("cancelAdminLogin").addEventListener("click", ()=> $("adminLoginOverlay").classList.add("hidden"));
+$("adminPassword").addEventListener("keydown", e=>{ if(e.key==="Enter") $("submitAdminLogin").click(); });
+
+async function loadAdminProfile(user){
+  if(!user) return false;
+  const {data,error}=await supabase.from("admin_profiles").select("*").eq("id",user.id).maybeSingle();
+  if(error){ console.error(error); showToast("Could not load administrator profile: " + error.message, true); return false; }
+  if(!data){ showToast("This account is authenticated but is not registered as a YTA administrator.", true); await supabase.auth.signOut(); return false; }
+  if(data.is_active === false || data.active === false){ showToast("This administrator account is inactive.", true); await supabase.auth.signOut(); return false; }
+  currentAdmin=data;
+  adminRole=data.role || "District Admin";
+  adminEmail=user.email || data.email || "";
+  const roleLabel = String(adminRole).replace(/_/g," ");
+  $("adminTagLine").textContent = "YTA · " + CONFIG.district + " · " + roleLabel;
+  return true;
+}
+
+$("submitAdminLogin").addEventListener("click", async ()=>{
+  const email=$("adminEmail").value.trim(), password=$("adminPassword").value;
+  if(!email || !password){ $("adminLoginError").textContent="⚠ Please enter both email and password."; $("adminLoginError").classList.add("show"); return; }
+  const btn=$("submitAdminLogin"); btn.disabled=true; $("adminLoginBtnLabel").innerHTML='<span class="spinner"></span> Signing in...';
+  try{
+    const {data,error}=await supabase.auth.signInWithPassword({email,password});
+    if(error) throw error;
+    if(!(await loadAdminProfile(data.user))) throw new Error("Administrator profile not found.");
+    $("adminLoginOverlay").classList.add("hidden");
+    enterAdminPanel();
+  }catch(e){
+    console.error(e);
+    $("adminLoginError").textContent="⚠ Incorrect email/password or unauthorized administrator account.";
+    $("adminLoginError").classList.add("show");
+  }finally{ btn.disabled=false; $("adminLoginBtnLabel").textContent="Login"; }
+});
+$("adminLogoutBtn").addEventListener("click", async ()=>{ if(supabase) await supabase.auth.signOut(); });
+
+async function handleAdminSession(session){
+  if(session && session.user){
+    if(await loadAdminProfile(session.user)) enterAdminPanel();
+  }else{
+    if(unsubRegistrations){ supabase.removeChannel(unsubRegistrations); unsubRegistrations=null; }
+    if(unsubActivity){ supabase.removeChannel(unsubActivity); unsubActivity=null; }
+    clearInterval(adminInactivityTimer);
+    currentAdmin=null; adminRole=null; adminEmail=null;
+    $("adminApp").classList.add("hidden"); $("teacherApp").classList.remove("hidden");
+  }
+}
+if(supabaseReady){
+  supabase.auth.onAuthStateChange((event,session)=>{ setTimeout(()=>handleAdminSession(session),0); });
+  supabase.auth.getSession().then(({data})=>handleAdminSession(data.session));
+}
+
+function enterAdminPanel(){
+  $("teacherApp").classList.add("hidden");
+  $("adminApp").classList.remove("hidden");
+  subscribeAdminData();
+  startAdminInactivityWatch();
+}
+function startAdminInactivityWatch(){
+  lastAdminActivityAt=Date.now();
+  ["click","keydown","mousemove","touchstart"].forEach(evt=>document.addEventListener(evt,onAdminActivity,{passive:true}));
+  clearInterval(adminInactivityTimer);
+  adminInactivityTimer=setInterval(()=>{
+    if(!$("adminApp").classList.contains("hidden") && (Date.now()-lastAdminActivityAt)/60000>=ADMIN_SESSION_MINUTES){
+      showToast("Admin session expired due to inactivity.",true);
+      supabase.auth.signOut();
+    }
+  },20000);
+}
+function onAdminActivity(){ if(!$("adminApp").classList.contains("hidden")) lastAdminActivityAt=Date.now(); }
+
+/* ============================================================
+   SECTION 8: ADMIN DASHBOARD — real-time Supabase listeners
+============================================================ */
+async function loadWhatsappRecipients(){
+  if(!supabaseReady) return;
+  try{
+    const {data,error}=await supabase.from("whatsapp_recipients").select("*").order("sort_order",{ascending:true});
+    if(error) throw error;
+    recipientListCache=(data||[]).filter(r=>r.is_active !== false && r.active !== false).map(r=>({
+      name:r.name || r.recipient_name || "YTA Recipient",
+      number:r.phone_number || r.number || r.whatsapp_number || ""
+    })).filter(r=>r.number);
+    if(recipientListCache.length) renderRecipientSelector();
+  }catch(e){ console.warn("Could not load WhatsApp recipients from Supabase; using configured fallback recipients.",e.message); }
+}
+
+function subscribeAdminData(){
+  if(unsubRegistrations){ supabase.removeChannel(unsubRegistrations); unsubRegistrations=null; }
+  if(unsubActivity){ supabase.removeChannel(unsubActivity); unsubActivity=null; }
+  $("connStatusPill").classList.remove("offline"); $("connStatusPill").classList.add("live");
+  $("connStatusPill").innerHTML="<span></span>Connecting...";
+
+  const membersChannel=supabase.channel("yta-members-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"memberships"},()=>loadMembers())
+    .subscribe(status=>{ if(status==="SUBSCRIBED") setConnectionStatus(true,"Live — synced across all devices"); });
+  unsubRegistrations=membersChannel;
+
+  const activityChannel=supabase.channel("yta-activity-live")
+    .on("postgres_changes",{event:"*",schema:"public",table:"admin_activity_logs"},()=>loadActivity())
+    .subscribe();
+  unsubActivity=activityChannel;
+
+  loadMembers();
+  loadActivity();
+}
+function setConnectionStatus(live,text){
+  $("connStatusPill").classList.toggle("live",live); $("connStatusPill").classList.toggle("offline",!live);
+  $("connStatusPill").innerHTML="<span></span>"+text;
+}
+async function loadMembers(){
+  try{
+    const {data,error}=await supabase.from("memberships").select("*").order("created_at",{ascending:false});
+    if(error) throw error;
+    recordsCache=(data||[]).map(mapMember);
+    setConnectionStatus(true,"Live — synced across all devices");
+    renderAdminDashboard();
+  }catch(e){
+    console.error(e); setConnectionStatus(false,"Offline — could not sync database");
+    showToast("Could not reach the central database: "+e.message,true);
+  }
+}
+async function loadActivity(){
+  try{
+    const {data,error}=await supabase.from("admin_activity_logs").select("*").order("created_at",{ascending:false}).limit(200);
+    if(error) throw error;
+    activityCache=(data||[]).map(e=>({actionType:e.action,regNo:e.registration_number,teacherName:e.teacher_name,dateTime:e.timestamp,adminEmail:e.admin_name,details:null}));
+    renderActivityLog();
+  }catch(e){ console.warn("Activity log load failed:",e.message); }
+}
+
+
+function filteredRecords(){
+  const q = ($("adminSearch").value || "").toLowerCase().trim();
+  const status = $("adminStatusFilter").value;
+  const taluka = $("adminFilterTaluka").value;
+  const role=String(adminRole||"").toLowerCase().replace(/_/g," ");
+  const scopedTaluka = role.includes("taluka") && currentAdmin && (currentAdmin.assigned_taluka || currentAdmin.taluka || currentAdmin.taluka_name) ? (currentAdmin.assigned_taluka || currentAdmin.taluka || currentAdmin.taluka_name) : "";
+  return recordsCache.filter(function(r){
+    const matchesScope = !scopedTaluka || r.taluka === scopedTaluka;
+    const matchesQ = !q ||
+      String(r.fullName||"").toLowerCase().includes(q) || String(r.semisCode||"").toLowerCase().includes(q) ||
+      String(r.regNo||"").toLowerCase().includes(q) || String(r.whatsappNumber||"").toLowerCase().includes(q) ||
+      String(r.schoolName||"").toLowerCase().includes(q);
+    const matchesStatus = status === "all" || (status === "pending" && r.verificationStatus !== "Verified") || (status === "verified" && r.verificationStatus === "Verified");
+    const matchesTaluka = !taluka || r.taluka === taluka;
+    return matchesScope && matchesQ && matchesStatus && matchesTaluka;
+  });
+}
+
+function renderAdminDashboard(){
+  const all = recordsCache;
+  $("statTotal").textContent = all.length;
+  const pendingAll = all.filter(r=>r.verificationStatus !== "Verified");
+  const verifiedAll = all.filter(r=>r.verificationStatus === "Verified");
+  $("statPending").textContent = pendingAll.length;
+  $("statVerified").textContent = verifiedAll.length;
+
+  const talukaCounts = {};
+  all.forEach(function(r){
+    talukaCounts[r.taluka] = talukaCounts[r.taluka] || {total:0, pending:0, verified:0};
+    talukaCounts[r.taluka].total++;
+    if(r.verificationStatus === "Verified") talukaCounts[r.taluka].verified++; else talukaCounts[r.taluka].pending++;
+  });
+  $("statTalukaCount").textContent = Object.keys(talukaCounts).length;
+
+  $("talukaSummaryBody").innerHTML = CONFIG.talukas.map(function(t){
+    const c = talukaCounts[t] || {total:0, pending:0, verified:0};
+    return `<tr><td>${escapeHtml(t)}</td><td class="tnum">${c.total}</td><td class="tnum">${c.pending}</td><td class="tnum">${c.verified}</td></tr>`;
+  }).join("");
+
+  renderTrendChart(all);
+  renderAdminLists();
+}
+
+let trendChartInstance = null;
+function renderTrendChart(all){
+  if(!window.Chart) return;
+  const days = [];
+  const counts = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  for(let i=13;i>=0;i--){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    days.push(d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}));
+    const key = d.toDateString();
+    counts.push(all.filter(function(r){ return new Date(r.dateTime).toDateString() === key; }).length);
+  }
+  const ctx = document.getElementById("trendChartCanvas");
+  if(!ctx) return;
+  if(trendChartInstance) trendChartInstance.destroy();
+  trendChartInstance = new Chart(ctx, {
+    type: "line",
+    data: { labels: days, datasets: [{ label:"Registrations", data: counts, borderColor:"#146B47", backgroundColor:"rgba(20,107,71,0.12)", fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:"#146B47" }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1, precision:0 } }, x:{ ticks:{ font:{size:10} } } }
+    }
+  });
+}
+
+function renderAdminLists(){
+  const filtered = filteredRecords();
+  const statusFilter = $("adminStatusFilter").value;
+  const pending = filtered.filter(r=>r.verificationStatus !== "Verified");
+  const verified = filtered.filter(r=>r.verificationStatus === "Verified");
+
+  $("pendingCountBadge").textContent = pending.length;
+  $("verifiedCountBadge").textContent = verified.length;
+
+  const pendingSectionVisible = statusFilter !== "verified";
+  const verifiedSectionVisible = statusFilter !== "pending";
+  const heads = document.querySelectorAll(".admin-section-head");
+  heads[0].classList.toggle("hidden", !pendingSectionVisible);
+  $("pendingList").classList.toggle("hidden", !pendingSectionVisible);
+  heads[1].classList.toggle("hidden", !verifiedSectionVisible);
+  $("verifiedList").classList.toggle("hidden", !verifiedSectionVisible);
+
+  $("pendingList").innerHTML = pending.length ? pending.map(pendingCardHtml).join("") : '<div class="empty-state">No pending registrations found.</div>';
+  $("verifiedList").innerHTML = verified.length ? verified.map(verifiedCardHtml).join("") : '<div class="empty-state">No verified members found.</div>';
+  wireCardActions();
+  // Bulk-verify selections only persist for records still visible in the pending list
+  const visibleIds = new Set(pending.map(r=>r.id));
+  bulkSelectedIds.forEach(id=>{ if(!visibleIds.has(id)) bulkSelectedIds.delete(id); });
+  wireBulkSelectCheckboxes();
+  updateBulkVerifyUI();
+
+  const taluka = $("adminFilterTaluka").value;
+  if(taluka){
+    const all = recordsCache.filter(r=>r.taluka===taluka);
+    const v = all.filter(r=>r.verificationStatus==="Verified").length;
+    $("talukaMiniSummary").textContent = `${taluka}: ${all.length} total · ${all.length-v} pending · ${v} verified`;
+  } else {
+    $("talukaMiniSummary").textContent = "Select a Taluka to see its summary";
+  }
+}
+
+function pendingCardHtml(r){
+  return `
+  <div class="member-card" data-id="${escapeHtml(r.id)}">
+    <div class="mc-top">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <input type="checkbox" class="bulk-select-cb no-print" data-id="${escapeHtml(r.id)}" style="width:18px; height:18px; margin-top:3px; accent-color:var(--emerald); flex:0 0 auto;" aria-label="Select for bulk verification">
+        <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      </div>
+      <span class="status-pill pending"><span></span>Pending</span>
+    </div>
+    <div class="mc-meta">
+      Father's Name: ${escapeHtml(r.fatherName)}<br>
+      School: ${escapeHtml(r.schoolName)}<br>
+      SEMIS: ${escapeHtml(r.semisCode)} · Taluka: ${escapeHtml(r.taluka)}<br>
+      WhatsApp: ${escapeHtml(r.whatsappNumber)}
+    </div>
+    <div class="mc-actions">
+      <button type="button" class="btn btn-primary btn-sm act-verify">✓ Verify</button>
+      <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
+      <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
+      <button type="button" class="icon-btn del act-delete" title="Delete" aria-label="Delete registration"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>`;
+}
+function verifiedCardHtml(r){
+  return `
+  <div class="member-card verified" data-id="${escapeHtml(r.id)}">
+    <div class="mc-top">
+      <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      <span class="status-pill verified"><span></span>Verified</span>
+    </div>
+    <div class="mc-meta">
+      Father's Name: ${escapeHtml(r.fatherName)}<br>
+      School: ${escapeHtml(r.schoolName)}<br>
+      SEMIS: ${escapeHtml(r.semisCode)} · Taluka: ${escapeHtml(r.taluka)}<br>
+      WhatsApp: ${escapeHtml(r.whatsappNumber)}
+    </div>
+    <div class="mc-verify-meta">🟢 Verified on ${escapeHtml(r.verifiedDate||"")} at ${escapeHtml(r.verifiedTime||"")}<br>Verified by: ${escapeHtml(r.verifiedByName||r.verifiedBy||"")}</div>
+    <div class="mc-actions">
+      <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
+      <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
+      <button type="button" class="btn btn-danger-outline btn-sm act-revert">↩ Revert</button>
+      <button type="button" class="icon-btn del act-delete" title="Delete" aria-label="Delete registration"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>`;
+}
+function wireCardActions(){
+  document.querySelectorAll("#pendingList .member-card, #verifiedList .member-card").forEach(function(card){
+    const id = card.dataset.id;
+    const rec = function(){ return recordsCache.find(x=>x.id===id); };
+    const verifyBtn = card.querySelector(".act-verify");
+    const revertBtn = card.querySelector(".act-revert");
+    const viewBtn = card.querySelector(".act-view");
+    const printBtn = card.querySelector(".act-print");
+    const delBtn = card.querySelector(".act-delete");
+    if(verifyBtn) verifyBtn.addEventListener("click", ()=> openVerifyModal(rec()));
+    if(revertBtn) revertBtn.addEventListener("click", ()=> openRevertModal(rec()));
+    if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
+    if(printBtn) printBtn.addEventListener("click", async ()=>{ $("printSheet").innerHTML = await buildPrintSheet(rec()); window.print(); });
+    if(delBtn) delBtn.addEventListener("click", ()=> openDeleteModal(rec()));
+  });
+}
+$("adminSearch").addEventListener("input", renderAdminLists);
+$("adminStatusFilter").addEventListener("change", renderAdminLists);
+$("adminFilterTaluka").addEventListener("change", renderAdminLists);
+
+/* ============================================================
+   BULK VERIFY
+============================================================ */
+let bulkSelectedIds = new Set();
+function updateBulkVerifyUI(){
+  const count = bulkSelectedIds.size;
+  $("bulkVerifyCount").textContent = count;
+  $("bulkVerifyBtn").disabled = count === 0;
+}
+function wireBulkSelectCheckboxes(){
+  document.querySelectorAll("#pendingList .bulk-select-cb").forEach(function(cb){
+    cb.checked = bulkSelectedIds.has(cb.dataset.id);
+    cb.addEventListener("change", function(){
+      if(cb.checked) bulkSelectedIds.add(cb.dataset.id); else bulkSelectedIds.delete(cb.dataset.id);
+      updateBulkVerifyUI();
+    });
+  });
+}
+$("selectAllPendingBtn").addEventListener("click", ()=>{
+  const boxes = document.querySelectorAll("#pendingList .bulk-select-cb");
+  const allSelected = boxes.length && Array.from(boxes).every(cb=>bulkSelectedIds.has(cb.dataset.id));
+  boxes.forEach(function(cb){
+    if(allSelected) bulkSelectedIds.delete(cb.dataset.id); else bulkSelectedIds.add(cb.dataset.id);
+    cb.checked = !allSelected;
+  });
+  updateBulkVerifyUI();
+});
+$("bulkVerifyBtn").addEventListener("click", async ()=>{
+  if(!bulkSelectedIds.size) return;
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to verify members.", true); return; }
+  const ids = Array.from(bulkSelectedIds);
+  const targets = recordsCache.filter(r=>ids.includes(r.id));
+  const btn = $("bulkVerifyBtn");
+  btn.disabled = true;
+  const now = new Date();
+  try{
+    const {error} = await supabase.from("memberships").update({
+      verification_status:"verified",
+      verification_date: now.toISOString().slice(0,10),
+      verification_time: now.toTimeString().slice(0,8),
+      verified_by: currentAdmin.id,
+      verified_by_name: (currentAdmin.full_name || adminEmail || "Administrator"),
+      updated_at: now.toISOString()
+    }).in("id", ids);
+    if(error) throw error;
+    for(const t of targets){ await logActivity("VERIFIED (bulk)", t.regNo, t.fullName); }
+    showToast(`${ids.length} teacher(s) marked as verified.`);
+    bulkSelectedIds.clear();
+    updateBulkVerifyUI();
+    await loadMembers();
+  }catch(e){
+    showToast("Bulk verification failed: " + e.message, true);
+    btn.disabled = false;
+  }
+});
+
+function openViewRecord(r){
+  if(!r) return;
+  const rows = [
+    ["Registration No.", r.regNo], ["Date/Time", new Date(r.dateTime).toLocaleString()],
+    ["Teacher Name", r.fullName], ["Father's Name / Surname", r.fatherName],
+    ["School", r.schoolName], ["SEMIS Code", r.semisCode], ["Taluka", r.taluka],
+    ["WhatsApp Number", r.whatsappNumber], ["Verification Status", statusLabel(r)]
+  ];
+  if(r.verificationStatus === "Verified") rows.push(["Verified Date", r.verifiedDate + " " + r.verifiedTime], ["Verified By", r.verifiedByName||r.verifiedBy]);
+  if(r.sentRecipients && r.sentRecipients.length) rows.push(["WhatsApp Sent To", r.sentRecipients.map(x=>x.name).join(", ")]);
+  $("viewRecordRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
+  $("viewRecordOverlay").dataset.id = r.id;
+  $("viewRecordOverlay").classList.remove("hidden");
+}
+$("closeViewRecord").addEventListener("click", ()=> $("viewRecordOverlay").classList.add("hidden"));
+$("printFromView").addEventListener("click", async ()=>{
+  const r = recordsCache.find(x=>x.id === $("viewRecordOverlay").dataset.id);
+  if(!r) return;
+  $("printSheet").innerHTML = await buildPrintSheet(r);
+  window.print();
+});
+
+function canPerform(action){
+  const role=String(adminRole||"").toLowerCase().replace(/_/g," ");
+  if(role.includes("super")) return true;
+  if(action==="delete" || action==="clear") return role.includes("super");
+  if(action==="verify") return role.includes("district") || role.includes("taluka");
+  return true;
+}
+
+/* ============================================================
+   SECTIONS 7-8: VERIFY / REVERT WORKFLOW
+============================================================ */
+function openVerifyModal(r){
+  if(!r) return;
+  pendingVerifyRegNo = r.id;
+  $("verifyRecordName").textContent = r.fullName;
+  $("verifyRecordRegNo").textContent = r.regNo;
+  $("verifyOverlay").classList.remove("hidden");
+}
+$("cancelVerify").addEventListener("click", ()=>{ pendingVerifyRegNo=null; $("verifyOverlay").classList.add("hidden"); });
+$("confirmVerify").addEventListener("click", async ()=>{
+  if(!pendingVerifyRegNo) return;
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to verify members.",true); return; }
+  const id = pendingVerifyRegNo;
+  const target = recordsCache.find(r=>r.id===id);
+  const now = new Date();
+  try{
+    const {error}=await supabase.from("memberships").update({verification_status:"verified",verification_date:now.toISOString().slice(0,10),verification_time:now.toTimeString().slice(0,8),verified_by:currentAdmin.id,verified_by_name:(currentAdmin.full_name||adminEmail||"Administrator"),updated_at:now.toISOString()}).eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("VERIFIED", target.regNo, target.fullName);
+    showToast("Teacher marked as verified.");
+    await loadMembers();
+  }catch(e){ showToast("Could not update: " + e.message, true); }
+  pendingVerifyRegNo = null;
+  $("verifyOverlay").classList.add("hidden");
+});
+
+function openRevertModal(r){
+  if(!r) return;
+  pendingRevertRegNo = r.id;
+  $("revertRecordName").textContent = r.fullName;
+  $("revertRecordRegNo").textContent = r.regNo;
+  $("revertOverlay").classList.remove("hidden");
+}
+$("cancelRevert").addEventListener("click", ()=>{ pendingRevertRegNo=null; $("revertOverlay").classList.add("hidden"); });
+$("confirmRevert").addEventListener("click", async ()=>{
+  if(!pendingRevertRegNo) return;
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to revert verification.",true); return; }
+  const id = pendingRevertRegNo;
+  const target = recordsCache.find(r=>r.id===id);
+  try{
+    const {error}=await supabase.from("memberships").update({verification_status:"pending",verification_date:null,verification_time:null,verified_by:null,updated_at:new Date().toISOString()}).eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("REVERTED", target.regNo, target.fullName);
+    showToast("Verification reverted — moved back to Pending.");
+    await loadMembers();
+  }catch(e){ showToast("Could not update: " + e.message, true); }
+  pendingRevertRegNo = null;
+  $("revertOverlay").classList.add("hidden");
+});
+
+/* ============================================================
+   SECTION 20: DELETE PROTECTION
+============================================================ */
+function openDeleteModal(r){
+  if(!r) return;
+  pendingDeleteRegNo = r.id;
+  $("deleteRecordName").textContent = r.fullName;
+  $("deleteRecordRegNo").textContent = r.regNo;
+  $("deleteOverlay").classList.remove("hidden");
+}
+$("cancelDelete").addEventListener("click", ()=>{ pendingDeleteRegNo=null; $("deleteOverlay").classList.add("hidden"); });
+$("confirmDelete").addEventListener("click", async ()=>{
+  if(!pendingDeleteRegNo) return;
+  if(!canPerform("delete")){ showToast("Only an authorized District/Super Admin can delete records.",true); return; }
+  const id = pendingDeleteRegNo;
+  const target = recordsCache.find(r=>r.id===id);
+  try{
+    const {error}=await supabase.from("memberships").delete().eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("DELETED", target.regNo, target.fullName);
+    showToast("Registration " + (target ? target.regNo : "") + " deleted.");
+    await loadMembers();
+  }catch(e){ showToast("Could not delete: " + e.message, true); }
+  pendingDeleteRegNo = null;
+  $("deleteOverlay").classList.add("hidden");
+});
+
+$("adminClearAllBtn").addEventListener("click", ()=>{
+  if(!canPerform("clear")){ showToast("Only an authorized District/Super Admin can clear records.",true); return; }
+  $("clearAllCount").textContent = recordsCache.length;
+  $("clearAllConfirmInput").value = "";
+  $("confirmClearAll").disabled = true;
+  $("clearAllOverlay").classList.remove("hidden");
+});
+$("cancelClearAll").addEventListener("click", ()=> $("clearAllOverlay").classList.add("hidden"));
+$("clearAllConfirmInput").addEventListener("input", (e)=>{
+  $("confirmClearAll").disabled = e.target.value.trim().toUpperCase() !== "DELETE ALL";
+});
+$("confirmClearAll").addEventListener("click", async ()=>{
+  if($("clearAllConfirmInput").value.trim().toUpperCase() !== "DELETE ALL") return;
+  const btn = $("confirmClearAll");
+  btn.disabled = true; btn.textContent = "Deleting...";
+  try{
+    const {error}=await supabase.from("memberships").delete().neq("id","00000000-0000-0000-0000-000000000000");
+    if(error) throw error;
+    await logActivity("CLEARED_ALL", "-", "-");
+    showToast("All registration records have been deleted.");
+    await loadMembers();
+  }catch(e){ showToast("Could not clear all records: " + e.message, true); }
+  $("clearAllOverlay").classList.add("hidden");
+  btn.textContent = "Delete Permanently";
+});
+
+/* ============================================================
+   SECTION 9: CSV EXPORT (admin only)
+============================================================ */
+function downloadCsv(filename, headers, rows){
+  const csvContent = [headers, ...rows].map(function(row){
+    return row.map(function(cell){ const s = String(cell ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(",");
+  }).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+$("adminExportAllBtn").addEventListener("click", ()=>{
+  const all = recordsCache;
+  if(!all.length){ showToast("No records to export.", true); return; }
+  const headers = ["Registration No.","Date","Time","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status"];
+  const rows = all.map(function(r){ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, statusLabel(r)]; });
+  downloadCsv("YTA_Naushahro_Feroze_Membership_Records.csv", headers, rows);
+  showToast("All records exported.");
+});
+$("adminExportVerifiedBtn").addEventListener("click", ()=>{
+  const all = recordsCache.filter(r=>r.verificationStatus==="Verified");
+  if(!all.length){ showToast("No verified members to export.", true); return; }
+  const headers = ["Registration No.","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status","Verification Date","Verification Time","Verified By"];
+  const rows = all.map(r=>[r.regNo, r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Verified", r.verifiedDate, r.verifiedTime, r.verifiedByName||r.verifiedBy]);
+  downloadCsv("YTA_NF_Verified_Members.csv", headers, rows);
+  showToast("Verified members exported.");
+});
+$("adminExportPendingBtn").addEventListener("click", ()=>{
+  const all = recordsCache.filter(r=>r.verificationStatus!=="Verified");
+  if(!all.length){ showToast("No pending members to export.", true); return; }
+  const headers = ["Registration No.","Date","Time","Name","Father's Name","School","SEMIS Code","Taluka","WhatsApp Number","Verification Status"];
+  const rows = all.map(function(r){ const dt=new Date(r.dateTime); return [r.regNo, dt.toLocaleDateString(), dt.toLocaleTimeString(), r.fullName, r.fatherName, r.schoolName, r.semisCode, r.taluka, r.whatsappNumber, "Pending Biometric Verification"]; });
+  downloadCsv("YTA_NF_Pending_Verification.csv", headers, rows);
+  showToast("Pending members exported.");
+});
+
+function exportPdf(title, filename, records, columns){
+  if(!records.length){ showToast("No records to export.", true); return; }
+  if(!window.jspdf){ showToast("PDF library did not load. Check your internet connection.", true); return; }
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:"landscape", unit:"pt", format:"a4"});
+  doc.setFontSize(9);
+  doc.setTextColor(20,107,71);
+  doc.text("YOUNG TEACHERS ALLIANCE", 40, 34);
+  doc.setTextColor(85,85,85);
+  doc.text("District " + CONFIG.district, 40, 47);
+  doc.setFontSize(14);
+  doc.setTextColor(18,34,43);
+  doc.text(title, 40, 68);
+  doc.autoTable({
+    startY: 84,
+    head: [columns.map(c=>c.label)],
+    body: records.map(r=>columns.map(c=>String(c.value(r)||""))),
+    styles:{fontSize:8, cellPadding:5},
+    headStyles:{fillColor:[14,59,92], textColor:255},
+    alternateRowStyles:{fillColor:[246,245,240]},
+    margin:{left:40, right:40}
+  });
+  const pageCount = doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text("YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199", 40, doc.internal.pageSize.getHeight()-20);
+  }
+  doc.save(filename);
+}
+$("adminExportAllPdfBtn").addEventListener("click", ()=>{
+  const cols = [
+    {label:"Reg. No.", value:r=>r.regNo}, {label:"Name", value:r=>r.fullName},
+    {label:"Father's Name", value:r=>r.fatherName}, {label:"School", value:r=>r.schoolName},
+    {label:"SEMIS", value:r=>r.semisCode}, {label:"Taluka", value:r=>r.taluka},
+    {label:"WhatsApp", value:r=>r.whatsappNumber}, {label:"Status", value:r=>statusLabel(r)}
+  ];
+  exportPdf("All Membership Registrations", "YTA_NF_All_Records.pdf", recordsCache, cols);
+});
+$("adminExportVerifiedPdfBtn").addEventListener("click", ()=>{
+  const cols = [
+    {label:"Reg. No.", value:r=>r.regNo}, {label:"Name", value:r=>r.fullName},
+    {label:"School", value:r=>r.schoolName}, {label:"Taluka", value:r=>r.taluka},
+    {label:"Verified Date", value:r=>r.verifiedDate}, {label:"Verified By", value:r=>r.verifiedByName||r.verifiedBy}
+  ];
+  exportPdf("Verified Members List", "YTA_NF_Verified_Members.pdf", recordsCache.filter(r=>r.verificationStatus==="Verified"), cols);
+});
+
+function printListSheet(title, records, includeVerifiedDate){
+  const rowsHtml = records.map(function(r,i){
+    return `<tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${i+1}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.regNo)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.fullName)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.schoolName)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.semisCode)}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.taluka)}</td>
+      ${includeVerifiedDate ? `<td style="padding:6px 8px;border-bottom:1px solid #ddd;">${escapeHtml(r.verifiedDate||"")}</td>` : ""}
+    </tr>`;
+  }).join("");
+  $("printSheet").innerHTML = `
+    <div style="max-width:960px;margin:30px auto;font-family:Georgia,serif;color:#12222B;padding:0 20px;">
+      <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:12px;margin-bottom:16px;">
+        <img src="data:image/jpeg;base64,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" alt="YTA Logo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:6px;">
+        <div style="font-size:11px;letter-spacing:2px;color:#146B47;font-weight:700;">YOUNG TEACHERS ALLIANCE</div>
+        <div style="font-size:12px;color:#555;">District ${CONFIG.district}</div>
+        <h2 style="margin:6px 0 0;">${title}</h2>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Sr. No.</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Reg. No.</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Teacher Name</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">School</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">SEMIS</th>
+          <th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Taluka</th>
+          ${includeVerifiedDate ? '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid #333;">Verification Date</th>' : ""}
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div style="margin-top:30px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
+    </div>`;
+  window.print();
+}
+$("adminPrintVerifiedBtn").addEventListener("click", ()=>{
+  const records = filteredRecords().filter(r=>r.verificationStatus==="Verified");
+  if(!records.length){ showToast("No verified members to print.", true); return; }
+  printListSheet("Verified Members List", records, true);
+});
+$("adminPrintAllBtn").addEventListener("click", ()=>{
+  if(!recordsCache.length){ showToast("No records to print.", true); return; }
+  printListSheet("All Membership Registrations", recordsCache, false);
+});
+
+/* ============================================================
+   SECTION 21: ADMIN ACTIVITY LOG
+============================================================ */
+const actionLabels = {
+  REGISTERED: "📝 Registered", VERIFIED: "✓ Verified", REVERTED: "↩ Reverted",
+  DELETED: "🗑 Deleted", CLEARED_ALL: "⚠ Cleared All Records"
+};
+function renderActivityLog(){
+  const log = activityCache;
+  $("activityCountLabel").textContent = log.length + " action" + (log.length===1?"":"s") + " recorded";
+  const list = $("activityLogList");
+  if(!log.length){ list.innerHTML = '<div class="empty-state">No activity recorded yet.</div>'; return; }
+  list.innerHTML = log.slice(0,80).map(function(e){
+    const label = (actionLabels[e.actionType] || e.actionType) + (e.regNo && e.regNo !== "-" ? " — " + escapeHtml(e.regNo) : "");
+    const sub = e.teacherName && e.teacherName !== "-" ? escapeHtml(e.teacherName) : "";
+    return `<div class="activity-item"><span class="a-label">${label}${sub ? " · " + sub : ""}</span><span class="a-time">${new Date(e.dateTime).toLocaleString()}</span></div>`;
+  }).join("");
+}
+$("activityToggle").addEventListener("click", toggleActivity);
+$("activityToggle").addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleActivity(); } });
+function toggleActivity(){
+  const open = !$("activityPanel").classList.contains("open");
+  $("activityPanel").classList.toggle("open", open);
+  $("activityToggle").classList.toggle("open", open);
+  $("activityToggle").setAttribute("aria-expanded", String(open));
+}
+
+/* ============================================================
+   PUBLIC VERIFICATION STATUS PAGE (?verify=REGNO in the URL)
+   Requires a Supabase RPC "yta_verify_lookup(p_reg_no text)" that
+   returns only full_name + verification_status for a given
+   registration number (see setup notes). Nothing else is exposed.
+============================================================ */
+async function checkVerifyStatusPage(){
+  const params = new URLSearchParams(window.location.search);
+  const regNo = params.get("verify");
+  if(!regNo) return false;
+  $("teacherApp").classList.add("hidden");
+  $("verifyStatusPage").classList.remove("hidden");
+  $("verifyRegNoLabel").textContent = regNo;
+  if(!supabaseReady){
+    $("verifyStatusLoading").classList.add("hidden");
+    $("verifyStatusNotFound").textContent = "Verification service is not available right now.";
+    $("verifyStatusNotFound").classList.remove("hidden");
+    return true;
+  }
+  try{
+    const {data,error} = await supabase.rpc("yta_verify_lookup", {p_reg_no: regNo});
+    if(error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    $("verifyStatusLoading").classList.add("hidden");
+    if(!row){
+      $("verifyStatusNotFound").classList.remove("hidden");
+      return true;
+    }
+    const isVerified = String(row.verification_status||"").toLowerCase()==="verified";
+    $("verifyStatusPill").classList.add(isVerified ? "verified" : "pending");
+    $("verifyStatusText").textContent = isVerified ? "Verified" : "Pending Biometric Verification";
+    $("verifyStatusName").textContent = row.full_name || "—";
+    $("verifyStatusResult").classList.remove("hidden");
+  }catch(e){
+    console.error(e);
+    $("verifyStatusLoading").classList.add("hidden");
+    $("verifyStatusNotFound").textContent = "Could not check status right now. Please try again later.";
+    $("verifyStatusNotFound").classList.remove("hidden");
+  }
+  return true;
+}
+$("verifyStatusBackBtn").addEventListener("click", ()=>{ window.location.href = window.location.pathname; });
+
+/* ============================================================
+   GLOBAL ERROR GUARD
+============================================================ */
+window.addEventListener("error", function(e){ console.error("YTA app error:", e.error || e.message); });
+
+/* ============================================================
+   BOOT
+============================================================ */
+checkVerifyStatusPage().then(function(isVerifyPage){
+  if(!isVerifyPage){
+    applyConfig();
+    goToStep(1);
+    loadWhatsappRecipients();
+  }
+});
+
+})();
+</script>
+</body>
+</html>
