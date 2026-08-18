@@ -303,6 +303,23 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .process-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-2);}
 .process-card.process-nomination{border-top-color:var(--gold);}
 .process-card.process-election{border-top-color:var(--emerald);}
+.process-card.process-status{border-top-color:var(--sky);}
+.nomination-status-result-card{margin-top:14px;padding:16px;border-radius:var(--radius-md);background:#fff;border:1px solid var(--line);}
+.nomination-status-result-card.approved{border-left:4px solid var(--emerald);}
+.nomination-status-result-card.rejected{border-left:4px solid var(--danger);}
+.nomination-status-result-card.pending{border-left:4px solid var(--gold);}
+.nomination-status-big{font-size:20px;font-weight:800;margin-bottom:10px;color:var(--deep-blue-2);}
+.nomination-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 14px;}
+.nomination-stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius-md);padding:11px 7px;text-align:center;}
+.nomination-stat .n{font-family:'Fraunces',serif;font-size:21px;font-weight:700;color:var(--deep-blue-2);display:block;}
+.nomination-stat .l{font-size:10px;color:#6b7a78;margin-top:2px;}
+.nomination-summary-table{width:100%;border-collapse:collapse;font-size:12px;min-width:520px;}
+.nomination-summary-table th,.nomination-summary-table td{padding:8px 6px;border-bottom:1px solid #F0F1EC;text-align:center;}
+.nomination-summary-table th:first-child,.nomination-summary-table td:first-child{text-align:left;}
+.nomination-summary-table th{font-size:10px;text-transform:uppercase;color:#6b7a78;border-bottom:2px solid var(--line);}
+.nomination-report-wrap{overflow-x:auto;}
+@media(max-width:560px){.nomination-stat-grid{grid-template-columns:1fr 1fr;}}
+
 .process-icon{display:block;font-size:28px;line-height:1;margin-bottom:8px;}
 .process-title{display:block;font-weight:800;color:var(--deep-blue-2);font-size:14px;}
 .process-sub{display:block;color:#6b7a78;font-size:10.5px;line-height:1.35;margin-top:4px;}
@@ -423,6 +440,11 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <span class="process-icon">🗳️</span>
       <span class="process-title">Election</span>
       <span class="process-sub">Taluka-wise Election Information</span>
+    </button>
+    <button type="button" class="process-card process-status" id="openNominationStatusBlock">
+      <span class="process-icon">🔎</span>
+      <span class="process-title">Check Nomination</span>
+      <span class="process-sub">Check Approved / Rejected Status</span>
     </button>
   </div>
 
@@ -681,6 +703,37 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div id="nominationResult" class="nomination-result hidden"></div>
   </section>
 
+  <!-- NOMINATION STATUS CHECKER -->
+  <section id="nominationStatusBlock" class="card hidden no-print">
+    <span class="section-eyebrow">Nomination Status</span>
+    <h2>🔎 Check My Nomination</h2>
+    <p class="sub">Enter your Registration Number to see your nomination status.</p>
+
+    <div class="field">
+      <label for="checkNominationRegNo">Registration Number</label>
+      <input type="text" id="checkNominationRegNo" placeholder="e.g. YTA-NF-0001" autocomplete="off">
+    </div>
+
+    <button type="button" class="btn btn-primary" id="checkNominationBtn">🔎 Check Status</button>
+
+    <div id="nominationStatusLoading" class="hidden" style="margin-top:14px;text-align:center;color:#6b7a78;">
+      Checking nomination...
+    </div>
+
+    <div id="nominationStatusNotFound" class="nomination-result error hidden"></div>
+
+    <div id="nominationStatusResult" class="nomination-status-result-card hidden">
+      <div class="nomination-status-big" id="nomStatusText"></div>
+      <div class="trow"><span class="k">Registration No.</span><span class="v mono" id="nomStatusRegNo"></span></div>
+      <div class="trow"><span class="k">Name</span><span class="v" id="nomStatusName"></span></div>
+      <div class="trow"><span class="k">Taluka</span><span class="v" id="nomStatusTaluka"></span></div>
+      <div class="trow"><span class="k">Post</span><span class="v" id="nomStatusPost"></span></div>
+      <div class="trow"><span class="k">Reviewed</span><span class="v" id="nomStatusReviewed"></span></div>
+    </div>
+
+    <button type="button" class="btn btn-ghost" id="closeNominationStatusBlock" style="margin-top:14px;">Back</button>
+  </section>
+
   <!-- ELECTION BLOCK -->
   <section id="electionBlock" class="card election-module hidden no-print">
     <span class="section-eyebrow">Election</span>
@@ -827,7 +880,47 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
           <option value="rejected">Rejected</option>
         </select>
       </div>
-      <div id="adminNominationsList"></div>
+      <div class="card" style="margin-bottom:14px;">
+      <div class="admin-section-head">
+        <h2>📊 Nomination Statistics</h2>
+        <span class="count-badge" id="nominationStatsTotal">0</span>
+      </div>
+      <div class="nomination-stat-grid">
+        <div class="nomination-stat"><span class="n" id="nomStatAll">0</span><span class="l">Total</span></div>
+        <div class="nomination-stat"><span class="n" id="nomStatPending">0</span><span class="l">Pending</span></div>
+        <div class="nomination-stat"><span class="n" id="nomStatApproved">0</span><span class="l">Approved</span></div>
+        <div class="nomination-stat"><span class="n" id="nomStatRejected">0</span><span class="l">Rejected</span></div>
+      </div>
+
+      <div class="admin-actions-row">
+        <button type="button" class="btn btn-primary btn-sm" id="exportAllNominationsPdf">📄 All PDF</button>
+        <button type="button" class="btn btn-primary btn-sm" id="exportApprovedNominationsPdf">✅ Approved PDF</button>
+        <button type="button" class="btn btn-primary btn-sm" id="exportPendingNominationsPdf">🟡 Pending PDF</button>
+        <button type="button" class="btn btn-danger btn-sm" id="exportRejectedNominationsPdf">❌ Rejected PDF</button>
+      </div>
+
+      <div class="admin-section-head" style="margin-top:14px;">
+        <h2>Post-wise Summary</h2>
+      </div>
+      <div class="nomination-report-wrap">
+        <table class="nomination-summary-table">
+          <thead><tr><th>Post</th><th>Total</th><th>Approved</th><th>Pending</th><th>Rejected</th></tr></thead>
+          <tbody id="nominationPostSummaryBody"></tbody>
+        </table>
+      </div>
+
+      <div class="admin-section-head" style="margin-top:18px;">
+        <h2>Taluka-wise Summary</h2>
+      </div>
+      <div class="nomination-report-wrap">
+        <table class="nomination-summary-table">
+          <thead><tr><th>Taluka</th><th>Total</th><th>Approved</th><th>Pending</th><th>Rejected</th></tr></thead>
+          <tbody id="nominationTalukaSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="adminNominationsList"></div>
     </div>
 
     <div class="records-toggle no-print" id="activityToggle" role="button" tabindex="0" aria-expanded="false">
@@ -1454,7 +1547,7 @@ $("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle
    REGISTRATION / NOMINATION / ELECTION MODULES
 ============================================================ */
 function showTeacherModule(moduleId){
-  ["registrationBlock","nominationBlock","electionBlock"].forEach(id=>{
+  ["registrationBlock","nominationBlock","electionBlock","nominationStatusBlock"].forEach(id=>{
     const el=$(id);
     if(el) el.classList.toggle("hidden", id !== moduleId);
   });
@@ -1472,6 +1565,67 @@ $("openNominationBlock").addEventListener("click",()=>showTeacherModule("nominat
 $("openElectionBlock").addEventListener("click",()=>showTeacherModule("electionBlock"));
 $("closeNominationBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
 $("closeElectionBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
+
+$("openNominationStatusBlock").addEventListener("click",()=>showTeacherModule("nominationStatusBlock"));
+
+$("checkNominationBtn").addEventListener("click", async ()=>{
+  const regNo=$("checkNominationRegNo").value.trim();
+  $("nominationStatusResult").classList.add("hidden");
+  $("nominationStatusNotFound").classList.add("hidden");
+
+  if(!regNo){
+    $("nominationStatusNotFound").textContent="Please enter your Registration Number.";
+    $("nominationStatusNotFound").classList.remove("hidden");
+    return;
+  }
+  if(!supabaseReady){
+    $("nominationStatusNotFound").textContent="Nomination status service is not available right now.";
+    $("nominationStatusNotFound").classList.remove("hidden");
+    return;
+  }
+
+  $("nominationStatusLoading").classList.remove("hidden");
+  $("checkNominationBtn").disabled=true;
+
+  try{
+    const {data,error}=await supabase.rpc("yta_nomination_status_lookup",{p_registration_number:regNo});
+    if(error) throw error;
+    const row=Array.isArray(data)?data[0]:data;
+
+    if(!row){
+      $("nominationStatusNotFound").textContent="No nomination was found for this Registration Number.";
+      $("nominationStatusNotFound").classList.remove("hidden");
+      return;
+    }
+
+    const status=String(row.status||"pending").toLowerCase();
+    const card=$("nominationStatusResult");
+    card.classList.remove("approved","rejected","pending");
+    card.classList.add(status==="approved"?"approved":status==="rejected"?"rejected":"pending");
+
+    $("nomStatusText").textContent=
+      status==="approved"?"🟢 NOMINATION APPROVED":
+      status==="rejected"?"🔴 NOMINATION REJECTED":"🟡 NOMINATION PENDING";
+
+    $("nomStatusRegNo").textContent=row.registration_number||"—";
+    $("nomStatusName").textContent=row.full_name||"—";
+    $("nomStatusTaluka").textContent=row.taluka||"—";
+    $("nomStatusPost").textContent=row.post||"—";
+    $("nomStatusReviewed").textContent=row.reviewed_at?new Date(row.reviewed_at).toLocaleString():"Not reviewed yet";
+
+    card.classList.remove("hidden");
+  }catch(err){
+    console.error(err);
+    $("nominationStatusNotFound").textContent="Could not check nomination status right now. Please try again later.";
+    $("nominationStatusNotFound").classList.remove("hidden");
+  }finally{
+    $("nominationStatusLoading").classList.add("hidden");
+    $("checkNominationBtn").disabled=false;
+  }
+});
+
+$("closeNominationStatusBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
+
 
 function nominationFormValid(){
   const fields=[
@@ -1639,7 +1793,77 @@ function renderAdminNominations(){
 
   document.querySelectorAll(".nom-approve").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"approved")));
   document.querySelectorAll(".nom-reject").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"rejected")));
+
+  renderNominationStatistics();
 }
+function renderNominationStatistics(){
+  const rows=nominationsCache||[];
+  const count=s=>rows.filter(r=>String(r.status||"pending").toLowerCase()===s).length;
+  $("nominationStatsTotal").textContent=rows.length;
+  $("nomStatAll").textContent=rows.length;
+  $("nomStatPending").textContent=count("pending");
+  $("nomStatApproved").textContent=count("approved");
+  $("nomStatRejected").textContent=count("rejected");
+
+  const posts=[...new Set(rows.map(r=>String(r.post||"—")))].sort();
+  $("nominationPostSummaryBody").innerHTML=posts.length?posts.map(post=>{
+    const x=rows.filter(r=>String(r.post||"—")===post);
+    return `<tr><td>${escapeHtml(post)}</td><td class="tnum">${x.length}</td><td class="tnum">${x.filter(r=>String(r.status||"pending").toLowerCase()==="approved").length}</td><td class="tnum">${x.filter(r=>String(r.status||"pending").toLowerCase()==="pending").length}</td><td class="tnum">${x.filter(r=>String(r.status||"pending").toLowerCase()==="rejected").length}</td></tr>`;
+  }).join(""):'<tr><td colspan="5">No nominations found.</td></tr>';
+
+  const talukas=[...new Set(rows.map(r=>String(r.taluka||"—")))].sort();
+  $("nominationTalukaSummaryBody").innerHTML=talukas.length?talukas.map(t=>{
+    const x=rows.filter(r=>String(r.taluka||"—")===t);
+    return `<tr><td>${escapeHtml(t)}</td><td class="tnum">${x.length}</td><td class="tnum">${x.filter(r=>String(r.status||"pending").toLowerCase()==="approved").length}</td><td class="tnum">${x.filter(r=>String(r.status||"pending").toLowerCase()==="pending").length}</td><td class="tnum">${x.filter(r=>String(r.status||"pending").toLowerCase()==="rejected").length}</td></tr>`;
+  }).join(""):'<tr><td colspan="5">No nominations found.</td></tr>';
+}
+
+function exportNominationsPdf(filterStatus){
+  const source=nominationsCache||[];
+  const rows=filterStatus?source.filter(r=>String(r.status||"pending").toLowerCase()===filterStatus):source;
+  if(!rows.length){ showToast("No nominations available for this report.",true); return; }
+  if(!window.jspdf || !window.jspdf.jsPDF){ showToast("PDF library is not available.",true); return; }
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+  const title=filterStatus?filterStatus.charAt(0).toUpperCase()+filterStatus.slice(1):"All";
+  doc.setFontSize(16);
+  doc.text("YOUNG TEACHERS ALLIANCE",148,12,{align:"center"});
+  doc.setFontSize(11);
+  doc.text("District Naushahro Feroze — Nomination Report",148,19,{align:"center"});
+  doc.setFontSize(10);
+  doc.text("Report: "+title+" | Generated: "+new Date().toLocaleString(),14,27);
+
+  const body=rows.map(r=>[
+    r.registration_number||"—",
+    r.full_name||"—",
+    r.father_name||"—",
+    r.taluka||"—",
+    r.post||"—",
+    r.school_name||"—",
+    r.semis_code||"—",
+    r.status||"pending",
+    r.reviewed_at?new Date(r.reviewed_at).toLocaleDateString():"—"
+  ]);
+
+  doc.autoTable({
+    startY:31,
+    head:[["Registration No.","Name","Father","Taluka","Post","School","SEMIS","Status","Reviewed"]],
+    body:body,
+    styles:{fontSize:7,cellPadding:2},
+    headStyles:{fontSize:7,fontStyle:"bold"},
+    margin:{left:10,right:10}
+  });
+
+  const safe=title.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+  doc.save("YTA-Nomination-Report-"+safe+".pdf");
+}
+
+$("exportAllNominationsPdf").addEventListener("click",()=>exportNominationsPdf(""));
+$("exportApprovedNominationsPdf").addEventListener("click",()=>exportNominationsPdf("approved"));
+$("exportPendingNominationsPdf").addEventListener("click",()=>exportNominationsPdf("pending"));
+$("exportRejectedNominationsPdf").addEventListener("click",()=>exportNominationsPdf("rejected"));
+
 async function updateNominationStatus(id,status){
   if(!canPerform("verify")){showToast("Your administrator role does not have permission to manage nominations.",true);return;}
   try{
