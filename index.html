@@ -319,6 +319,16 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .nomination-summary-table th{font-size:10px;text-transform:uppercase;color:#6b7a78;border-bottom:2px solid var(--line);}
 .nomination-report-wrap{overflow-x:auto;}
 @media(max-width:560px){.nomination-stat-grid{grid-template-columns:1fr 1fr;}}
+.compact-name-cell{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;}
+.compact-name{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;background:#f7f9f6;border:1px solid var(--line);font-size:11.5px;font-weight:700;color:var(--deep-blue-2);}
+.processed-box{border:1px solid var(--line);border-radius:var(--radius-md);padding:12px;margin-top:12px;background:#fbfcfa;}
+.processed-box h3{font-size:12px;margin:0 0 7px;color:var(--deep-blue-2);}
+.processed-scroll{max-height:120px;overflow:auto;}
+.new-nomination-alert{display:none;margin:10px 0;padding:11px 13px;border-radius:var(--radius-md);background:#fff7df;border:1px solid #f1d27a;color:#6d5100;font-weight:700;}
+.search-btn-wrap{display:flex;gap:7px;align-items:center;}
+.search-btn-wrap input{flex:1;}
+@media(max-width:560px){.search-btn-wrap{align-items:stretch}.search-btn-wrap .btn{padding-left:12px;padding-right:12px;}}
+
 
 .process-icon{display:block;font-size:28px;line-height:1;margin-bottom:8px;}
 .process-title{display:block;font-weight:800;color:var(--deep-blue-2);font-size:14px;}
@@ -829,7 +839,10 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div class="card" style="padding:16px;">
       <h2 style="font-size:14.5px;">Search &amp; Filter Records</h2>
       <div class="admin-filters">
-        <input type="text" id="adminSearch" placeholder="Search name, SEMIS, reg no., WhatsApp, or school">
+        <div class="search-btn-wrap">
+          <input type="text" id="adminSearch" placeholder="Search registration: name, SEMIS, reg no., WhatsApp, or school">
+          <button type="button" class="btn btn-primary btn-sm" id="adminRegistrationSearchBtn">🔎 Search</button>
+        </div>
         <select id="adminStatusFilter">
           <option value="all">All Records</option>
           <option value="pending">Pending Verification</option>
@@ -865,17 +878,28 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 
     <div class="admin-section-head"><h2>🟢 Verified Members</h2><span class="count-badge" id="verifiedCountBadge">0</span></div>
     <div id="verifiedList"></div>
+    <div class="processed-box no-print">
+      <h3>🟢 Verified Registrations — Names</h3>
+      <div id="verifiedRegistrationNames" class="compact-name-cell processed-scroll">
+        <span class="empty-state">No verified registrations yet.</span>
+      </div>
+    </div>
 
     <div class="card admin-nominations-card" style="padding:16px;">
       <div class="admin-section-head" style="margin-top:0;">
         <h2>📋 Nomination Applications</h2>
         <span class="count-badge" id="nominationCountBadge">0</span>
       </div>
+      <div id="newNominationAlert" class="new-nomination-alert">🔔 <span id="newNominationAlertText">New nomination received.</span></div>
       <div class="admin-filters">
+        <div class="search-btn-wrap">
+          <input type="text" id="adminNominationSearch" placeholder="Search nomination: registration no. or name">
+          <button type="button" class="btn btn-primary btn-sm" id="adminNominationSearchBtn">🔎 Search</button>
+        </div>
         <select id="adminNominationTaluka"><option value="">All Talukas</option></select>
         <select id="adminNominationStatus">
+          <option value="pending" selected>Pending — Current List</option>
           <option value="all">All Nomination Status</option>
-          <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
@@ -921,6 +945,20 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     </div>
 
     <div id="adminNominationsList"></div>
+
+    <div class="processed-box no-print">
+      <h3>🟢 Approved Nominations — Names</h3>
+      <div id="approvedNominationNames" class="compact-name-cell processed-scroll">
+        <span class="empty-state">No approved nominations yet.</span>
+      </div>
+    </div>
+
+    <div class="processed-box no-print">
+      <h3>🔴 Rejected Nominations — Names</h3>
+      <div id="rejectedNominationNames" class="compact-name-cell processed-scroll">
+        <span class="empty-state">No rejected nominations yet.</span>
+      </div>
+    </div>
     </div>
 
     <div class="records-toggle no-print" id="activityToggle" role="button" tabindex="0" aria-expanded="false">
@@ -1680,8 +1718,29 @@ $("nominationForm").addEventListener("submit",async e=>{
   };
 
   try{
+    // One registration number = one nomination only.
+    const {data:existing,error:checkError}=await supabase
+      .from("nominations")
+      .select("id,post,status,full_name")
+      .eq("registration_number",payload.registration_number)
+      .limit(1);
+    if(checkError) throw checkError;
+
+    if(existing && existing.length){
+      const e=existing[0];
+      throw new Error(
+        'This Registration Number has already submitted a nomination for the post "'+
+        (e.post||"—")+'". One person cannot submit nominations for two posts.'
+      );
+    }
+
     const {error}=await supabase.from("nominations").insert(payload);
-    if(error) throw error;
+    if(error){
+      if(error.code==="23505"){
+        throw new Error("This Registration Number already has a nomination. A person can nominate for only one post.");
+      }
+      throw error;
+    }
 
     result.className="nomination-result success";
     result.innerHTML="<b>✅ Nomination Submitted Successfully</b><br><br>"+
@@ -1742,12 +1801,34 @@ async function loadPublicCandidates(){
 }
 
 /* ADMIN: NOMINATIONS */
+let nominationsLoadedOnce=false;
+let lastNominationIds=new Set();
+
+function notifyAdminNewNomination(row){
+  const name=row?.full_name||"New candidate";
+  const post=row?.post||"nomination";
+  $("newNominationAlertText").textContent="New nomination received: "+name+" — "+post;
+  $("newNominationAlert").style.display="block";
+  showToast("🔔 New nomination: "+name+" — "+post);
+  if("Notification" in window && Notification.permission==="granted"){
+    try{ new Notification("YTA — New Nomination",{body:name+" submitted for "+post+"."}); }catch(e){}
+  }
+}
+
 async function loadNominations(){
   if(!supabaseReady) return;
   try{
     const {data,error}=await supabase.from("nominations").select("*").order("created_at",{ascending:false});
     if(error) throw error;
-    nominationsCache=data||[];
+    const next=data||[];
+    const nextIds=new Set(next.map(r=>r.id));
+    if(nominationsLoadedOnce){
+      const added=next.filter(r=>!lastNominationIds.has(r.id) && String(r.status||"pending").toLowerCase()==="pending");
+      if(added.length) added.forEach(notifyAdminNewNomination);
+    }
+    nominationsCache=next;
+    lastNominationIds=nextIds;
+    nominationsLoadedOnce=true;
     renderAdminNominations();
   }catch(err){
     console.warn("Nomination load failed:",err.message);
@@ -1757,10 +1838,15 @@ async function loadNominations(){
 function filteredNominations(){
   const taluka=$("adminNominationTaluka").value;
   const status=$("adminNominationStatus").value;
-  return nominationsCache.filter(r=>
-    (!taluka || r.taluka===taluka) &&
-    (status==="all" || String(r.status||"pending").toLowerCase()===status)
-  );
+  const q=($("adminNominationSearch").value||"").toLowerCase().trim();
+  return nominationsCache.filter(r=>{
+    const matchesSearch=!q ||
+      String(r.registration_number||"").toLowerCase().includes(q) ||
+      String(r.full_name||"").toLowerCase().includes(q);
+    return matchesSearch &&
+      (!taluka || r.taluka===taluka) &&
+      (status==="all" || String(r.status||"pending").toLowerCase()===status);
+  });
 }
 function nominationStatusPill(status){
   const s=String(status||"pending").toLowerCase();
@@ -1793,6 +1879,15 @@ function renderAdminNominations(){
 
   document.querySelectorAll(".nom-approve").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"approved")));
   document.querySelectorAll(".nom-reject").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"rejected")));
+
+  const approved=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="approved");
+  const rejected=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="rejected");
+  $("approvedNominationNames").innerHTML=approved.length
+    ? approved.map(r=>`<span class="compact-name">✓ ${escapeHtml(r.full_name||"—")}</span>`).join("")
+    : '<span class="empty-state">No approved nominations yet.</span>';
+  $("rejectedNominationNames").innerHTML=rejected.length
+    ? rejected.map(r=>`<span class="compact-name">✕ ${escapeHtml(r.full_name||"—")}</span>`).join("")
+    : '<span class="empty-state">No rejected nominations yet.</span>';
 
   renderNominationStatistics();
 }
@@ -2187,6 +2282,9 @@ function renderAdminLists(){
 
   $("pendingList").innerHTML = pending.length ? pending.map(pendingCardHtml).join("") : '<div class="empty-state">No pending registrations found.</div>';
   $("verifiedList").innerHTML = verified.length ? verified.map(verifiedCardHtml).join("") : '<div class="empty-state">No verified members found.</div>';
+  $("verifiedRegistrationNames").innerHTML = verified.length
+    ? verified.map(r=>`<span class="compact-name">✓ ${escapeHtml(r.fullName||"—")}</span>`).join("")
+    : '<span class="empty-state">No verified registrations yet.</span>';
   wireCardActions();
   // Bulk-verify selections only persist for records still visible in the pending list
   const visibleIds = new Set(pending.map(r=>r.id));
@@ -2267,8 +2365,13 @@ function wireCardActions(){
   });
 }
 $("adminSearch").addEventListener("input", renderAdminLists);
+$("adminRegistrationSearchBtn").addEventListener("click", renderAdminLists);
+$("adminSearch").addEventListener("keydown",e=>{if(e.key==="Enter")renderAdminLists();});
 $("adminStatusFilter").addEventListener("change", renderAdminLists);
 $("adminFilterTaluka").addEventListener("change", renderAdminLists);
+$("adminNominationSearchBtn").addEventListener("click", renderAdminNominations);
+$("adminNominationSearch").addEventListener("keydown",e=>{if(e.key==="Enter")renderAdminNominations();});
+$("adminNominationSearch").addEventListener("input", renderAdminNominations);
 
 /* ============================================================
    BULK VERIFY
