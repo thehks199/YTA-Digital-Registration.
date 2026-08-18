@@ -2309,7 +2309,7 @@ async function loadActivity(){
 }
 
 
-function filteredRecords(){
+function filteredRecords(ignoreStatus){
   const q = ($("adminSearch").value || "").toLowerCase().trim();
   const status = $("adminStatusFilter").value;
   const taluka = $("adminFilterTaluka").value;
@@ -2321,7 +2321,7 @@ function filteredRecords(){
       String(r.fullName||"").toLowerCase().includes(q) || String(r.semisCode||"").toLowerCase().includes(q) ||
       String(r.regNo||"").toLowerCase().includes(q) || String(r.whatsappNumber||"").toLowerCase().includes(q) ||
       String(r.schoolName||"").toLowerCase().includes(q);
-    const matchesStatus = status === "all" || (status === "pending" && r.verificationStatus !== "Verified") || (status === "verified" && r.verificationStatus === "Verified");
+    const matchesStatus = ignoreStatus || status === "all" || (status === "pending" && r.verificationStatus !== "Verified") || (status === "verified" && r.verificationStatus === "Verified");
     const matchesTaluka = !taluka || r.taluka === taluka;
     return matchesScope && matchesQ && matchesStatus && matchesTaluka;
   });
@@ -2397,8 +2397,9 @@ function renderAdminLists(){
 
   $("pendingList").innerHTML = pending.length ? pending.map(pendingCardHtml).join("") : '<div class="empty-state">No pending registrations found.</div>';
   $("verifiedList").innerHTML = verified.length ? verified.map(verifiedCardHtml).join("") : '<div class="empty-state">No verified members found.</div>';
-  $("verifiedRegistrationNames").innerHTML = verified.length
-    ? verified.map(r=>`<span class="compact-name" data-id="${escapeHtml(r.id)}">✓ ${escapeHtml(r.fullName||"—")}</span>`).join("")
+  const allVerified = filteredRecords(true).filter(r=>r.verificationStatus === "Verified");
+  $("verifiedRegistrationNames").innerHTML = allVerified.length
+    ? allVerified.map(r=>`<span class="compact-name" data-id="${escapeHtml(r.id)}">✓ ${escapeHtml(r.fullName||"—")}</span>`).join("")
     : '<span class="empty-state">No verified registrations yet.</span>';
   $("verifiedRegistrationNames").querySelectorAll(".compact-name").forEach(el=>{
     el.addEventListener("click", ()=>{
