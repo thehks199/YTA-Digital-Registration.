@@ -1827,12 +1827,23 @@ function exportNominationsPdf(filterStatus){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
   const title=filterStatus?filterStatus.charAt(0).toUpperCase()+filterStatus.slice(1):"All";
+
+  // YTA logo — use the logo already embedded in the page.
+  try{
+    const logoImg=document.querySelector('img[src^="data:image/"]');
+    if(logoImg && logoImg.src){
+      doc.addImage(logoImg.src,"JPEG",10,6,18,18);
+    }
+  }catch(logoError){
+    console.warn("YTA logo could not be added to PDF:",logoError);
+  }
+
   doc.setFontSize(16);
   doc.text("YOUNG TEACHERS ALLIANCE",148,12,{align:"center"});
   doc.setFontSize(11);
   doc.text("District Naushahro Feroze — Nomination Report",148,19,{align:"center"});
   doc.setFontSize(10);
-  doc.text("Report: "+title+" | Generated: "+new Date().toLocaleString(),14,27);
+  doc.text("Report: "+title+" | Generated: "+new Date().toLocaleString(),14,29);
 
   const body=rows.map(r=>[
     r.registration_number||"—",
@@ -1847,7 +1858,7 @@ function exportNominationsPdf(filterStatus){
   ]);
 
   doc.autoTable({
-    startY:31,
+    startY:34,
     head:[["Registration No.","Name","Father","Taluka","Post","School","SEMIS","Status","Reviewed"]],
     body:body,
     styles:{fontSize:7,cellPadding:2},
