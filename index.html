@@ -2012,7 +2012,7 @@ $("closeViewNomination").addEventListener("click", ()=> $("viewNominationOverlay
 $("printFromViewNomination").addEventListener("click", async ()=>{
   if(!currentViewedNomination) return;
   $("printSheet").innerHTML = await buildNominationPrintSheet(currentViewedNomination);
-  window.print();
+  printSheetWhenReady();
 });
 function renderNominationStatistics(){
   const rows=nominationsCache||[];
@@ -2119,6 +2119,29 @@ $("adminNominationStatus").addEventListener("change",renderAdminNominations);
 ============================================================ */
 function statusLabel(r){ return r.verificationStatus === "Verified" ? "Verified" : "Pending Biometric Verification"; }
 const VERIFY_BASE_URL = "https://thehks199.github.io/YTA-Digital-Registration./";
+// Setting printSheet.innerHTML with <img> tags and calling window.print()
+// immediately can fire the print dialog before the browser has actually
+// loaded/painted those images (especially the YTA logo), so they show up
+// blank on the printed page. This waits for every image to finish loading
+// (or fail, after a timeout) before opening the print dialog.
+function printSheetWhenReady(){
+  const imgs = Array.from(document.querySelectorAll("#printSheet img"));
+  if(!imgs.length){ window.print(); return; }
+  let remaining = imgs.length;
+  let done = false;
+  const finish = () => { if(done) return; done = true; window.print(); };
+  imgs.forEach(img=>{
+    if(img.complete && img.naturalWidth > 0){
+      remaining--;
+      if(remaining <= 0) finish();
+      return;
+    }
+    img.addEventListener("load", ()=>{ remaining--; if(remaining <= 0) finish(); }, {once:true});
+    img.addEventListener("error", ()=>{ remaining--; if(remaining <= 0) finish(); }, {once:true});
+  });
+  // Safety net in case an image never fires load/error for some reason
+  setTimeout(finish, 1200);
+}
 async function buildQrDataUrl(regNo){
   try{
     if(!window.QRCode || !regNo) return "";
@@ -2160,7 +2183,7 @@ async function buildNominationPrintSheet(nom){
 $("printNominationSlipBtn").addEventListener("click", async ()=>{
   if(!lastSubmittedNomination){ showToast("Nothing to print yet.", true); return; }
   $("printSheet").innerHTML = await buildNominationPrintSheet(lastSubmittedNomination);
-  window.print();
+  printSheetWhenReady();
 });
 async function buildPrintSheet(record){
   const verifiedBlock = record.verificationStatus === "Verified"
@@ -2202,7 +2225,7 @@ async function buildPrintSheet(record){
 $("printBtn").addEventListener("click", async ()=>{
   if(!currentRecord){ showToast("Nothing to print yet.", true); return; }
   $("printSheet").innerHTML = await buildPrintSheet(currentRecord);
-  window.print();
+  printSheetWhenReady();
 });
 
 /* ============================================================
@@ -2532,7 +2555,7 @@ function wireCardActions(){
     if(verifyBtn) verifyBtn.addEventListener("click", ()=> openVerifyModal(rec()));
     if(revertBtn) revertBtn.addEventListener("click", ()=> openRevertModal(rec()));
     if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
-    if(printBtn) printBtn.addEventListener("click", async ()=>{ $("printSheet").innerHTML = await buildPrintSheet(rec()); window.print(); });
+    if(printBtn) printBtn.addEventListener("click", async ()=>{ $("printSheet").innerHTML = await buildPrintSheet(rec()); printSheetWhenReady(); });
     if(delBtn) delBtn.addEventListener("click", ()=> openDeleteModal(rec()));
   });
 }
@@ -2620,7 +2643,7 @@ $("printFromView").addEventListener("click", async ()=>{
   const r = recordsCache.find(x=>String(x.id) === String($("viewRecordOverlay").dataset.id));
   if(!r) return;
   $("printSheet").innerHTML = await buildPrintSheet(r);
-  window.print();
+  printSheetWhenReady();
 });
 
 function canPerform(action){
@@ -2856,7 +2879,7 @@ function printListSheet(title, records, includeVerifiedDate){
       </table>
       <div style="margin-top:30px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
     </div>`;
-  window.print();
+  printSheetWhenReady();
 }
 $("adminPrintVerifiedBtn").addEventListener("click", ()=>{
   const records = filteredRecords().filter(r=>r.verificationStatus==="Verified");
