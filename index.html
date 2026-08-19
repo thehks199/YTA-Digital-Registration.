@@ -716,6 +716,9 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     </form>
 
     <div id="nominationResult" class="nomination-result hidden"></div>
+    <div class="btn-row no-print" id="nominationPrintRow" style="display:none; margin-top:12px;">
+      <button type="button" class="btn btn-primary" id="printNominationSlipBtn">🖨️ Print Nomination Slip</button>
+    </div>
   </section>
 
   <!-- NOMINATION STATUS CHECKER -->
@@ -1055,6 +1058,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div class="ticket-rows" id="viewNominationRows" style="margin-bottom:12px;"></div>
     <div class="btn-row">
       <button type="button" class="btn btn-ghost" id="closeViewNomination">Close</button>
+      <button type="button" class="btn btn-primary" id="printFromViewNomination">Print</button>
     </div>
   </div>
 </div>
@@ -1121,6 +1125,7 @@ const ADMIN_SESSION_MINUTES = 15;
 ============================================================ */
 let currentStep = 1;
 let currentRecord = null;         // record currently being registered by this teacher
+let lastSubmittedNomination = null; // nomination this teacher just submitted (for printing)
 let recipientMode = "single";
 let selectedRecipients = [];
 let sendQueue = [];
@@ -1789,6 +1794,8 @@ $("nominationForm").addEventListener("submit",async e=>{
       "Taluka: <b>"+escapeHtml(payload.taluka)+"</b><br>"+
       "Post: <b>"+escapeHtml(payload.post)+"</b><br><br>"+
       "Your nomination has been submitted for YTA administration verification.";
+    lastSubmittedNomination = Object.assign({}, payload, {created_at: new Date().toISOString()});
+    $("nominationPrintRow").style.display = "";
     $("nominationForm").reset();
   }catch(err){
     console.error(err);
@@ -1985,8 +1992,10 @@ function renderAdminNominations(){
 
   renderNominationStatistics();
 }
+let currentViewedNomination = null;
 function openViewNomination(r){
   if(!r) return;
+  currentViewedNomination = r;
   const rows = [
     ["Nomination For (Post)", r.post], ["Status", (r.status||"pending")],
     ["Full Name", r.full_name], ["Father's Name", r.father_name],
@@ -2000,6 +2009,11 @@ function openViewNomination(r){
   $("viewNominationOverlay").classList.remove("hidden");
 }
 $("closeViewNomination").addEventListener("click", ()=> $("viewNominationOverlay").classList.add("hidden"));
+$("printFromViewNomination").addEventListener("click", async ()=>{
+  if(!currentViewedNomination) return;
+  $("printSheet").innerHTML = await buildNominationPrintSheet(currentViewedNomination);
+  window.print();
+});
 function renderNominationStatistics(){
   const rows=nominationsCache||[];
   const count=s=>rows.filter(r=>String(r.status||"pending").toLowerCase()===s).length;
@@ -2112,6 +2126,42 @@ async function buildQrDataUrl(regNo){
     return await QRCode.toDataURL(url, {width:140, margin:1, color:{dark:"#0E3B5C", light:"#FFFFFF"}});
   }catch(e){ console.warn("QR generation failed:", e.message); return ""; }
 }
+async function buildNominationPrintSheet(nom){
+  if(!nom) return "";
+  const dt = nom.created_at ? new Date(nom.created_at) : new Date();
+  const statusText = nom.status ? (nom.status.charAt(0).toUpperCase()+nom.status.slice(1)) : "Pending Review";
+  return `
+    <div style="font-family:Georgia,serif; max-width:700px; margin:0 auto; color:#12222B;">
+      <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
+        <img src="assets/yta-logo.jpg" alt="YTA Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
+        <div style="font-size:11px;letter-spacing:2px;color:#146B47;font-weight:700;">YOUNG TEACHERS ALLIANCE</div>
+        <div style="font-size:13px;color:#555;">District ${CONFIG.district}</div>
+        <h2 style="margin:8px 0 0;">Taluka-Level Nomination Form</h2>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+        <tr><td style="padding:8px 0;color:#555;width:40%;">Date</td><td style="padding:8px 0;">${dt.toLocaleDateString()}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">YTA Registration No.</td><td style="padding:8px 0;font-weight:700;">${escapeHtml(nom.registration_number||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Full Name</td><td style="padding:8px 0;">${escapeHtml(nom.full_name||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Father's Name</td><td style="padding:8px 0;">${escapeHtml(nom.father_name||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">School</td><td style="padding:8px 0;">${escapeHtml(nom.school_name||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">SEMIS Code</td><td style="padding:8px 0;">${escapeHtml(nom.semis_code||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Taluka</td><td style="padding:8px 0;">${escapeHtml(nom.taluka||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Nominating For</td><td style="padding:8px 0;font-weight:700;">${escapeHtml(nom.post||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">WhatsApp</td><td style="padding:8px 0;">${escapeHtml(nom.whatsapp_number||"")}</td></tr>
+        <tr><td style="padding:8px 0;color:#555;">Status</td><td style="padding:8px 0;">${escapeHtml(statusText)}</td></tr>
+      </table>
+      <div style="margin-top:50px;display:flex;justify-content:space-between;">
+        <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">Nominee Signature</div>
+        <div style="width:45%;border-top:1px solid #333;padding-top:6px;font-size:12px;color:#555;">YTA Official</div>
+      </div>
+      <div style="margin-top:40px;text-align:center;font-size:10.5px;color:#999;">YTA Digital Registration System · Developed by Syed Sibtain Raza · 03002627199</div>
+    </div>`;
+}
+$("printNominationSlipBtn").addEventListener("click", async ()=>{
+  if(!lastSubmittedNomination){ showToast("Nothing to print yet.", true); return; }
+  $("printSheet").innerHTML = await buildNominationPrintSheet(lastSubmittedNomination);
+  window.print();
+});
 async function buildPrintSheet(record){
   const verifiedBlock = record.verificationStatus === "Verified"
     ? `<tr><td style="padding:8px 0;color:#555;">Verified Date</td><td style="padding:8px 0;">${escapeHtml(record.verifiedDate||"")} ${escapeHtml(record.verifiedTime||"")}</td></tr>
