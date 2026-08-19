@@ -304,6 +304,15 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
 .process-card.process-nomination{border-top-color:var(--gold);}
 .process-card.process-election{border-top-color:var(--emerald);}
 .process-card.process-status{border-top-color:var(--sky);}
+.process-card.process-public-verify{border-top-color:var(--emerald);}
+.public-verify-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px;}
+.public-check-card{border:1px solid var(--line);border-radius:var(--radius-md);padding:14px;background:#fbfcfa;}
+.public-check-card h3{margin:0 0 5px;font-size:14px;color:var(--deep-blue-2);}
+.public-check-card p{font-size:11.5px;color:#6b7a78;line-height:1.5;margin:0 0 10px;}
+.public-result{margin-top:10px;padding:10px 12px;border-radius:var(--radius-sm);font-size:12px;line-height:1.5;}
+.public-result.success{background:var(--emerald-2);border:1px solid #BFE3CE;color:#0F6B3A;}
+.public-result.pending{background:var(--gold-2);border:1px solid #E3CE97;color:#8A6A00;}
+.public-result.error{background:var(--danger-bg);border:1px solid #efc3c0;color:var(--danger);}
 .nomination-status-result-card{margin-top:14px;padding:16px;border-radius:var(--radius-md);background:#fff;border:1px solid var(--line);}
 .nomination-status-result-card.approved{border-left:4px solid var(--emerald);}
 .nomination-status-result-card.rejected{border-left:4px solid var(--danger);}
@@ -461,6 +470,39 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <span class="process-title">Check Nomination</span>
       <span class="process-sub">Check Approved / Rejected Status</span>
     </button>
+    <button type="button" class="process-card process-public-verify" id="openPublicVerifyBlock">
+      <span class="process-icon">✅</span>
+      <span class="process-title">Public Verification</span>
+      <span class="process-sub">Verify Registration · Nomination · SEMIS</span>
+    </button>
+  </div>
+
+  <!-- PUBLIC VERIFICATION BLOCK -->
+  <div id="publicVerifyBlock" class="card hidden">
+    <span class="section-eyebrow">🔐 Public Verification</span>
+    <h2>Verify YTA Registration & Nomination</h2>
+    <p class="sub">Any teacher or member of the public can check a YTA registration number. No private CNIC or WhatsApp data is shown.</p>
+    <div class="field">
+      <label for="publicVerifyRegNo">YTA Registration Number</label>
+      <div class="search-btn-wrap">
+        <input type="text" id="publicVerifyRegNo" placeholder="e.g. YTA-NF-0001" autocomplete="off">
+        <button type="button" class="btn btn-primary btn-sm" id="publicVerifyBtn">🔎 Verify</button>
+      </div>
+    </div>
+    <div id="publicVerifyResult" class="public-result hidden"></div>
+    <div class="public-verify-grid">
+      <div class="public-check-card">
+        <h3>🏫 Verify School / SEMIS</h3>
+        <p>Open the official Sindh School Education & Literacy Department institution checker to verify a school using its SEMIS code.</p>
+        <button type="button" class="btn btn-ghost btn-sm" id="openOfficialSemisChecker">🔍 Official SEMIS Checker</button>
+      </div>
+      <div class="public-check-card">
+        <h3>🗳️ Check Nomination Status</h3>
+        <p>Use the registration number above to check Pending, Approved or Rejected nomination status.</p>
+        <button type="button" class="btn btn-ghost btn-sm" id="publicNominationCheckBtn">📋 Check Nomination</button>
+      </div>
+    </div>
+    <button type="button" class="btn btn-text" id="closePublicVerifyBlock" style="margin-top:10px;">← Back</button>
   </div>
 
   <div class="info-card">
@@ -1593,6 +1635,66 @@ function finishSendQueue(){
 }
 
 /* ============================================================
+   PUBLIC VERIFICATION — Registration / Nomination / SEMIS
+============================================================ */
+async function publicVerifyRegistration(){
+  const regNo=$("publicVerifyRegNo").value.trim();
+  const box=$("publicVerifyResult");
+  box.className="public-result hidden";
+  box.innerHTML="";
+  if(!regNo){ box.className="public-result error"; box.textContent="Please enter a YTA Registration Number."; return; }
+  if(!supabaseReady){ box.className="public-result error"; box.textContent="Verification service is not available right now."; return; }
+  $("publicVerifyBtn").disabled=true;
+  $("publicVerifyBtn").innerHTML='<span class="spinner"></span>';
+  try{
+    const {data,error}=await supabase.rpc("yta_verify_lookup",{p_reg_no:regNo});
+    if(error) throw error;
+    const row=Array.isArray(data)?data[0]:data;
+    if(!row){
+      box.className="public-result error";
+      box.innerHTML="<b>🔴 Registration Not Found</b><br>No YTA registration was found for this number.";
+      return;
+    }
+    const verified=String(row.verification_status||"").toLowerCase()==="verified";
+    let nominationText="No nomination record found";
+    try{
+      const nomRes=await supabase.rpc("yta_nomination_status_lookup",{p_registration_number:regNo});
+      if(!nomRes.error){
+        const nom=Array.isArray(nomRes.data)?nomRes.data[0]:nomRes.data;
+        if(nom){
+          const ns=String(nom.status||"pending").toLowerCase();
+          nominationText=ns==="approved"?"🟢 Approved":ns==="rejected"?"🔴 Rejected":"🟡 Pending";
+        }
+      }
+    }catch(_){}
+    box.className="public-result "+(verified?"success":"pending");
+    box.innerHTML="<b>"+(verified?"🟢 REGISTRATION VERIFIED":"🟡 REGISTRATION PENDING")+"</b><br>"+
+      "Teacher: <b>"+escapeHtml(row.full_name||"—")+"</b><br>"+
+      "Registration: <span class='mono'>"+escapeHtml(regNo)+"</span><br>"+
+      "Nomination: <b>"+nominationText+"</b>";
+  }catch(e){
+    console.error(e);
+    box.className="public-result error";
+    box.textContent="Could not check this registration right now. Please try again later.";
+  }finally{
+    $("publicVerifyBtn").disabled=false;
+    $("publicVerifyBtn").textContent="🔎 Verify";
+  }
+}
+$("publicVerifyBtn").addEventListener("click",publicVerifyRegistration);
+$("publicVerifyRegNo").addEventListener("keydown",e=>{if(e.key==="Enter") publicVerifyRegistration();});
+$("openOfficialSemisChecker").addEventListener("click",()=>{
+  window.open("https://checker.sindheducation.gov.pk/ListInstitution.aspx","_blank","noopener,noreferrer");
+});
+$("publicNominationCheckBtn").addEventListener("click",()=>{
+  const regNo=$("publicVerifyRegNo").value.trim();
+  if(!regNo){ showToast("Enter a YTA Registration Number first.",true); return; }
+  $("checkNominationRegNo").value=regNo;
+  showTeacherModule("nominationStatusBlock");
+  $("checkNominationBtn").click();
+});
+
+/* ============================================================
    NEW REGISTRATION
 ============================================================ */
 $("newRegBtn").addEventListener("click", ()=>{
@@ -1613,7 +1715,7 @@ $("aboutToggle").addEventListener("click", ()=> $("aboutPanel").classList.toggle
    REGISTRATION / NOMINATION / ELECTION MODULES
 ============================================================ */
 function showTeacherModule(moduleId){
-  ["registrationBlock","nominationBlock","electionBlock","nominationStatusBlock"].forEach(id=>{
+  ["registrationBlock","nominationBlock","electionBlock","nominationStatusBlock","publicVerifyBlock"].forEach(id=>{
     const el=$(id);
     if(el) el.classList.toggle("hidden", id !== moduleId);
   });
@@ -1633,6 +1735,11 @@ $("closeNominationBlock").addEventListener("click",()=>showTeacherModule("regist
 $("closeElectionBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
 
 $("openNominationStatusBlock").addEventListener("click",()=>showTeacherModule("nominationStatusBlock"));
+$("openPublicVerifyBlock").addEventListener("click",()=>{
+  showTeacherModule("publicVerifyBlock");
+  $("publicVerifyRegNo").focus();
+});
+$("closePublicVerifyBlock").addEventListener("click",()=>showTeacherModule("registrationBlock"));
 
 $("checkNominationBtn").addEventListener("click", async ()=>{
   const regNo=$("checkNominationRegNo").value.trim();
@@ -1967,13 +2074,19 @@ function renderAdminNominations(){
         SEMIS: ${escapeHtml(r.semis_code||"—")} · WhatsApp: ${escapeHtml(r.whatsapp_number||"—")}
       </div>
       <div class="nomination-admin-actions">
+        ${String(r.status||"pending").toLowerCase()==="pending" ? `
         <button type="button" class="btn btn-primary btn-sm nom-approve" data-id="${escapeHtml(r.id)}">✓ Approve</button>
-        <button type="button" class="btn btn-danger btn-sm nom-reject" data-id="${escapeHtml(r.id)}">✕ Reject</button>
+        <button type="button" class="btn btn-danger btn-sm nom-reject" data-id="${escapeHtml(r.id)}">✕ Reject</button>` : ""}
+        <button type="button" class="btn btn-ghost btn-sm nom-view" data-id="${escapeHtml(r.id)}">👁 Full Data</button>
       </div>
     </div>`).join(""):'<div class="empty-state">No nomination applications found.</div>';
 
   document.querySelectorAll(".nom-approve").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"approved")));
   document.querySelectorAll(".nom-reject").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"rejected")));
+  document.querySelectorAll(".nom-view").forEach(b=>b.addEventListener("click",()=>{
+    const nom=nominationsCache.find(x=>String(x.id)===String(b.dataset.id));
+    if(nom) openViewNomination(nom);
+  }));
 
   const approved=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="approved");
   const rejected=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="rejected");
@@ -2552,7 +2665,7 @@ function wireCardActions(){
     const viewBtn = card.querySelector(".act-view");
     const printBtn = card.querySelector(".act-print");
     const delBtn = card.querySelector(".act-delete");
-    if(verifyBtn) verifyBtn.addEventListener("click", ()=> openVerifyModal(rec()));
+    if(verifyBtn) verifyBtn.addEventListener("click", ()=> quickVerifyRegistration(rec()));
     if(revertBtn) revertBtn.addEventListener("click", ()=> openRevertModal(rec()));
     if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
     if(printBtn) printBtn.addEventListener("click", async ()=>{ $("printSheet").innerHTML = await buildPrintSheet(rec()); printSheetWhenReady(); });
@@ -2657,6 +2770,33 @@ function canPerform(action){
 /* ============================================================
    SECTIONS 7-8: VERIFY / REVERT WORKFLOW
 ============================================================ */
+async function quickVerifyRegistration(r){
+  if(!r) return;
+  if(!canPerform("verify")){ showToast("Your administrator role does not have permission to verify members.",true); return; }
+  const now=new Date();
+  const card=document.querySelector('#pendingList .member-card[data-id="'+CSS.escape(String(r.id))+'"]');
+  const btn=card ? card.querySelector(".act-verify") : null;
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Verifying'; }
+  try{
+    const {error}=await supabase.from("memberships").update({
+      verification_status:"verified",
+      verification_date:now.toISOString().slice(0,10),
+      verification_time:now.toTimeString().slice(0,8),
+      verified_by:currentAdmin.id,
+      verified_by_name:(currentAdmin.full_name||adminEmail||"Administrator"),
+      updated_at:now.toISOString()
+    }).eq("id",r.id);
+    if(error) throw error;
+    await logActivity("VERIFIED",r.regNo,r.fullName);
+    showToast("🟢 "+r.fullName+" — Registration Verified.");
+    await loadMembers();
+  }catch(e){
+    console.error(e);
+    showToast("Could not verify: "+e.message,true);
+    if(btn){ btn.disabled=false; btn.textContent="✓ Verify"; }
+  }
+}
+
 function openVerifyModal(r){
   if(!r) return;
   pendingVerifyRegNo = r.id;
