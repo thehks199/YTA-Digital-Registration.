@@ -1978,7 +1978,7 @@ function renderAdminNominations(){
     : '<span class="empty-state">No rejected nominations yet.</span>';
   [...document.querySelectorAll("#approvedNominationNames .compact-name"), ...document.querySelectorAll("#rejectedNominationNames .compact-name")].forEach(el=>{
     el.addEventListener("click", ()=>{
-      const nom = nominationsCache.find(x=>x.id === el.dataset.id);
+      const nom = nominationsCache.find(x=>String(x.id) === String(el.dataset.id));
       if(nom) openViewNomination(nom);
     });
   });
@@ -2403,7 +2403,7 @@ function renderAdminLists(){
     : '<span class="empty-state">No verified registrations yet.</span>';
   $("verifiedRegistrationNames").querySelectorAll(".compact-name").forEach(el=>{
     el.addEventListener("click", ()=>{
-      const rec = recordsCache.find(x=>x.id === el.dataset.id);
+      const rec = recordsCache.find(x=>String(x.id) === String(el.dataset.id));
       if(rec) openViewRecord(rec);
     });
   });
@@ -2473,7 +2473,7 @@ function verifiedCardHtml(r){
 function wireCardActions(){
   document.querySelectorAll("#pendingList .member-card, #verifiedList .member-card").forEach(function(card){
     const id = card.dataset.id;
-    const rec = function(){ return recordsCache.find(x=>x.id===id); };
+    const rec = function(){ return recordsCache.find(x=>String(x.id)===String(id)); };
     const verifyBtn = card.querySelector(".act-verify");
     const revertBtn = card.querySelector(".act-revert");
     const viewBtn = card.querySelector(".act-view");
@@ -2567,7 +2567,7 @@ function openViewRecord(r){
 }
 $("closeViewRecord").addEventListener("click", ()=> $("viewRecordOverlay").classList.add("hidden"));
 $("printFromView").addEventListener("click", async ()=>{
-  const r = recordsCache.find(x=>x.id === $("viewRecordOverlay").dataset.id);
+  const r = recordsCache.find(x=>String(x.id) === String($("viewRecordOverlay").dataset.id));
   if(!r) return;
   $("printSheet").innerHTML = await buildPrintSheet(r);
   window.print();
