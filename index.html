@@ -1061,6 +1061,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div class="btn-row">
       <button type="button" class="btn btn-ghost" id="closeViewRecord">Close</button>
       <button type="button" class="btn btn-primary" id="printFromView">Print</button>
+      <button type="button" class="btn btn-danger hidden" id="deleteFromView">🗑 Delete</button>
     </div>
   </div>
 </div>
@@ -2664,6 +2665,7 @@ function openViewRecord(r){
   if(r.sentRecipients && r.sentRecipients.length) rows.push(["WhatsApp Sent To", r.sentRecipients.map(x=>x.name).join(", ")]);
   $("viewRecordRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v)}</span></div>`).join("");
   $("viewRecordOverlay").dataset.id = r.id;
+  $("deleteFromView").classList.remove("hidden");
   $("viewRecordOverlay").classList.remove("hidden");
 }
 $("closeViewRecord").addEventListener("click", ()=> $("viewRecordOverlay").classList.add("hidden"));
@@ -2672,6 +2674,12 @@ $("printFromView").addEventListener("click", async ()=>{
   if(!r) return;
   $("printSheet").innerHTML = await buildPrintSheet(r);
   printSheetWhenReady();
+});
+$("deleteFromView").addEventListener("click", ()=>{
+  const r = recordsCache.find(x=>String(x.id) === String($("viewRecordOverlay").dataset.id));
+  if(!r) return;
+  $("viewRecordOverlay").classList.add("hidden");
+  openDeleteModal(r);
 });
 
 function canPerform(action){
