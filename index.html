@@ -1072,6 +1072,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div class="btn-row">
       <button type="button" class="btn btn-ghost" id="closeViewNomination">Close</button>
       <button type="button" class="btn btn-primary" id="printFromViewNomination">Print</button>
+      <button type="button" class="btn btn-danger hidden" id="deleteFromViewNomination">🗑 Delete</button>
     </div>
   </div>
 </div>
@@ -2026,6 +2027,8 @@ function openViewNomination(r){
   ];
   if(r.reviewed_at) rows.push(["Reviewed By", r.reviewed_by_name || r.reviewed_by || "—"], ["Reviewed At", new Date(r.reviewed_at).toLocaleString()]);
   $("viewNominationRows").innerHTML = rows.map(([k,v])=>`<div class="trow"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(v||"—")}</span></div>`).join("");
+  const s = String(r.status||"pending").toLowerCase();
+  $("deleteFromViewNomination").classList.toggle("hidden", s==="pending");
   $("viewNominationOverlay").classList.remove("hidden");
 }
 $("closeViewNomination").addEventListener("click", ()=> $("viewNominationOverlay").classList.add("hidden"));
@@ -2033,6 +2036,11 @@ $("printFromViewNomination").addEventListener("click", async ()=>{
   if(!currentViewedNomination) return;
   $("printSheet").innerHTML = await buildNominationPrintSheet(currentViewedNomination);
   printSheetWhenReady();
+});
+$("deleteFromViewNomination").addEventListener("click", ()=>{
+  if(!currentViewedNomination) return;
+  $("viewNominationOverlay").classList.add("hidden");
+  openDeleteNominationModal(currentViewedNomination);
 });
 function renderNominationStatistics(){
   const rows=nominationsCache||[];
