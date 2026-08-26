@@ -1026,6 +1026,19 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
   </div>
 </div>
 
+<!-- DELETE NOMINATION MODAL -->
+<div class="modal-overlay hidden no-print" id="deleteNominationOverlay">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠️ Delete Nomination</h3>
+    <p>Are you sure you want to permanently delete the nomination of:<br><span class="record-name" id="deleteNominationRecordName">—</span><br>Registration: <span class="mono" id="deleteNominationRecordRegNo">—</span></p>
+    <p style="color:var(--danger); font-weight:600; font-size:12.5px;">This action cannot be undone.</p>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="cancelDeleteNomination">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmDeleteNomination">Delete Permanently</button>
+    </div>
+  </div>
+</div>
+
 <!-- CLEAR ALL MODAL -->
 <div class="modal-overlay hidden no-print" id="clearAllOverlay">
   <div class="modal">
@@ -1967,13 +1980,20 @@ function renderAdminNominations(){
         SEMIS: ${escapeHtml(r.semis_code||"—")} · WhatsApp: ${escapeHtml(r.whatsapp_number||"—")}
       </div>
       <div class="nomination-admin-actions">
+        ${String(r.status||"pending").toLowerCase()==="pending" ? `
         <button type="button" class="btn btn-primary btn-sm nom-approve" data-id="${escapeHtml(r.id)}">✓ Approve</button>
         <button type="button" class="btn btn-danger btn-sm nom-reject" data-id="${escapeHtml(r.id)}">✕ Reject</button>
+        ` : ""}
+        <button type="button" class="icon-btn del nom-delete" data-id="${escapeHtml(r.id)}" title="Delete" aria-label="Delete nomination"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
       </div>
     </div>`).join(""):'<div class="empty-state">No nomination applications found.</div>';
 
   document.querySelectorAll(".nom-approve").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"approved")));
   document.querySelectorAll(".nom-reject").forEach(b=>b.addEventListener("click",()=>updateNominationStatus(b.dataset.id,"rejected")));
+  document.querySelectorAll(".nom-delete").forEach(b=>b.addEventListener("click",()=>{
+    const nom=nominationsCache.find(x=>String(x.id)===String(b.dataset.id));
+    if(nom) openDeleteNominationModal(nom);
+  }));
 
   const approved=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="approved");
   const rejected=nominationsCache.filter(r=>String(r.status||"pending").toLowerCase()==="rejected");
@@ -2731,6 +2751,31 @@ $("confirmDelete").addEventListener("click", async ()=>{
   }catch(e){ showToast("Could not delete: " + e.message, true); }
   pendingDeleteRegNo = null;
   $("deleteOverlay").classList.add("hidden");
+});
+
+let pendingDeleteNominationId = null;
+function openDeleteNominationModal(r){
+  if(!r) return;
+  pendingDeleteNominationId = r.id;
+  $("deleteNominationRecordName").textContent = r.full_name || "—";
+  $("deleteNominationRecordRegNo").textContent = r.registration_number || "—";
+  $("deleteNominationOverlay").classList.remove("hidden");
+}
+$("cancelDeleteNomination").addEventListener("click", ()=>{ pendingDeleteNominationId=null; $("deleteNominationOverlay").classList.add("hidden"); });
+$("confirmDeleteNomination").addEventListener("click", async ()=>{
+  if(!pendingDeleteNominationId) return;
+  if(!canPerform("delete")){ showToast("Only an authorized District/Super Admin can delete records.",true); return; }
+  const id = pendingDeleteNominationId;
+  const target = nominationsCache.find(r=>r.id===id);
+  try{
+    const {error}=await supabase.from("nominations").delete().eq("id",id);
+    if(error) throw error;
+    if(target) await logActivity("NOMINATION_DELETED", target.registration_number, target.full_name);
+    showToast("Nomination " + (target ? target.registration_number : "") + " deleted.");
+    await loadNominations();
+  }catch(e){ showToast("Could not delete: " + e.message, true); }
+  pendingDeleteNominationId = null;
+  $("deleteNominationOverlay").classList.add("hidden");
 });
 
 $("adminClearAllBtn").addEventListener("click", ()=>{
