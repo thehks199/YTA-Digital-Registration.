@@ -1169,6 +1169,12 @@ let recipientListCache = [];
    DOM HELPERS
 ============================================================ */
 const $ = (id) => document.getElementById(id);
+// Returns YYYY-MM-DD using LOCAL date parts (not UTC), so verification_date
+// always matches the same calendar day as verification_time.
+function localDateStr(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
 function showToast(msg, isError){
   const t = $("toast");
   t.textContent = msg;
@@ -2635,7 +2641,7 @@ $("bulkVerifyBtn").addEventListener("click", async ()=>{
   try{
     const {error} = await supabase.from("memberships").update({
       verification_status:"verified",
-      verification_date: now.toISOString().slice(0,10),
+      verification_date: localDateStr(now),
       verification_time: now.toTimeString().slice(0,8),
       verified_by: currentAdmin.id,
       verified_by_name: (currentAdmin.full_name || adminEmail || "Administrator"),
@@ -2708,7 +2714,7 @@ $("confirmVerify").addEventListener("click", async ()=>{
   const target = recordsCache.find(r=>r.id===id);
   const now = new Date();
   try{
-    const {error}=await supabase.from("memberships").update({verification_status:"verified",verification_date:now.toISOString().slice(0,10),verification_time:now.toTimeString().slice(0,8),verified_by:currentAdmin.id,verified_by_name:(currentAdmin.full_name||adminEmail||"Administrator"),updated_at:now.toISOString()}).eq("id",id);
+    const {error}=await supabase.from("memberships").update({verification_status:"verified",verification_date:localDateStr(now),verification_time:now.toTimeString().slice(0,8),verified_by:currentAdmin.id,verified_by_name:(currentAdmin.full_name||adminEmail||"Administrator"),updated_at:now.toISOString()}).eq("id",id);
     if(error) throw error;
     if(target) await logActivity("VERIFIED", target.regNo, target.fullName);
     showToast("Teacher marked as verified.");
