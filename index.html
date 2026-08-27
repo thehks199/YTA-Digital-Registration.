@@ -438,6 +438,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <li class="step" data-step="5"><div class="dot">5</div><div class="label">Submit</div></li>
   </ol>
   <div class="step-bar"><div class="step-bar-fill" id="stepBarFill"></div></div>
+  <div id="stepBarPct" style="text-align:right;font-size:11px;color:#777;margin-top:4px;">6% complete</div>
 
   <!-- YTA THREE MAIN BLOCKS -->
   <div class="process-grid no-print">
@@ -873,6 +874,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <div class="admin-actions-row">
         <button type="button" class="btn btn-ghost btn-sm" id="adminPrintVerifiedBtn">Print Verified List</button>
         <button type="button" class="btn btn-ghost btn-sm" id="adminPrintAllBtn">Print All Records</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminTrashBtn">🗑 Deleted Records</button>
         <button type="button" class="btn btn-danger-outline btn-sm" id="adminClearAllBtn">Clear All Records</button>
       </div>
     </div>
@@ -1062,6 +1064,18 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
       <button type="button" class="btn btn-ghost" id="closeViewRecord">Close</button>
       <button type="button" class="btn btn-primary" id="printFromView">Print</button>
       <button type="button" class="btn btn-danger hidden" id="deleteFromView">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETED RECORDS (TRASH / RECOVERY) MODAL -->
+<div class="modal-overlay hidden no-print" id="trashOverlay">
+  <div class="modal" style="max-width:640px;">
+    <h3>🗑 Deleted Records</h3>
+    <p style="font-size:12.5px;color:#777;margin-top:-6px;">Soft-deleted registrations. Restore them, or remove permanently.</p>
+    <div id="trashList" style="max-height:55vh;overflow-y:auto;"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="closeTrash">Close</button>
     </div>
   </div>
 </div>
@@ -1290,6 +1304,8 @@ function goToStep(n){
     s.classList.toggle("done", sn < n);
   });
   $("stepBarFill").style.width = stepFillPct[n] + "%";
+  const pctEl = $("stepBarPct");
+  if(pctEl) pctEl.textContent = stepFillPct[n] + "% complete";
   currentStep = n;
   window.scrollTo({top:0, behavior:"smooth"});
 }
@@ -1421,7 +1437,14 @@ $("confirmToStep4").addEventListener("click", async ()=>{
       // the memberships SELECT policy intentionally blocks them from reading
       // membership rows. INSERT must succeed before any success UI appears.
       const {error} = await supabase.from("memberships").insert(payload);
-      if(error) throw error;
+      if(error){
+        // 23505 = Postgres unique_violation. Requires a UNIQUE constraint on
+        // whatsapp_number in Supabase (see setup notes) for this to trigger.
+        if(error.code === "23505" || /duplicate key|unique/i.test(error.message||"")){
+          throw new Error("This WhatsApp number is already registered for YTA membership. Each teacher can register only once.");
+        }
+        throw error;
+      }
 
       currentRecord = {
         id: null,
@@ -2229,8 +2252,14 @@ async function buildPrintSheet(record){
         <img src="${qrDataUrl}" alt="Verification QR Code" style="width:100px;height:100px;">
         <div style="font-size:10px;color:#888;margin-top:4px;">Scan to verify this registration</div>
       </div>` : "";
+  const isVerified = statusLabel(record) === "Verified";
+  const verifiedStamp = isVerified ? `
+      <div style="position:absolute;top:120px;right:40px;transform:rotate(-18deg);border:3px solid #146B47;color:#146B47;border-radius:10px;padding:6px 14px;font-family:Georgia,serif;font-weight:700;letter-spacing:2px;font-size:15px;opacity:0.85;">
+        VERIFIED ✓
+      </div>` : "";
   return `
-    <div style="max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
+    <div style="position:relative;max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
+      ${verifiedStamp}
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
         <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACgAKADASIAAhEBAxEB/8QAHAAAAgIDAQEAAAAAAAAAAAAAAAQCBgMFBwEI/8QAQRAAAgEDAgMGAwUECQMFAAAAAQIDAAQRBSEGEjEHEyJBUWEUMnEVI0KBkTNSodEWVFVikpOUscFFguFyorLS8f/EABsBAAEFAQEAAAAAAAAAAAAAAAIAAQMEBQYH/8QANREAAQMCAwQIBgICAwAAAAAAAQACAwQRBSExEkFRYQYTInGRobHwFDKBwdHhI/EVQiRScv/aAAwDAQACEQMRAD8A6NM/WlJXqUr0pK/vTgIVCZ/elJW96nM/Xek5nowLJlCZ8+dKSvt1qUz9aUlfeiAQEqEr7mlJX96nK9KSv13okJKhK9Kyuf0qUr0rI9EAgKhK/XJpWV6nK/oaVkbejSUZGpeR69kasDtSQKLtS7n3qUjb+1YXNOhXjGsTnfFeuax04SRRRRTpL6XmfHnScz7bGpzPSk0lUwFdUJX96TmfGd6nK/vSkz+9OhKhM/Xek5nqcznfpSsjEnABYk4AHnRaBAeCxyPSsr+lXrhbh2S9SS1aC1jaNGNzNcw94olJHJDzA5Xw5J5dwevpWl4j4UuNPcmVXsM9BcnMLf8AonA5SPZuU1mRYxTPlMV8x7/d9LKw6jlDA+yqkj1uOB+HZOJdXaFudbWJSZ3QjmUlW5QM+pH6A03o3Buo3waedrZIEKlUWdXaYHzUqSAB6k+oG9bW/tJ7O9gh4YR5riOFYxZxwlDkKe8Zn6yZIJHoM+mKq4pjLWRmOlcC86cB+/JTUlEXODpRZq55q9nc6bfzWF4gSeE8rqDkdM/7HNa6Rt+tdMTQbXWtEaJpTdaiJO8RjDyPEpTxKzj9oeflIznCjyJxVR1zg7VtMvJIp59OMCMFF0bxI42/JiGB/u4zVqhxiCdgbI4B413XO+11DUUUjDdouPeqrLtvS8hrpXCPZ5dX7JcCAXUed7q6ieGyT3AbEk59gFX1JrUdovDs1hczwpZxrc2Tu0jRQLCLi1OO7nCL4Tg8wYr8vh5vWpW4xTOqOoBz97vJRuopRH1hGSozGsTHavWNYmOa1gqa8Jya8oop0kUUUUkl9CzPv1pOZ6nM9JzP71UVwlRlfrSkr9d6lNJ1zSkz70QCAlRlffGauLcJajZWsWoaPDHqX3fM80FyplwRv3SY8J6gNlm8wAaosz1dey25v7Nvgp1kS0nBlsywwcj5uX+7/wA1zfSerqKOmE0di0fMNL93dwWlhUMc8pY7I7irDwfr2n6tp/wdlafZ/wAJ4GsyclPfPnk9T1zVihnniBWOQhT1U7g/UVzviK+0+x7QbXVdOuYzJI/cajEh6MfM+5H8RXQQrEAgNg9DjrXkGKRuinbURONnjaF9eY+h8dV2dI5r4zG4Ds5clCOO2hna4trCztrhxhpYIVjZh7kda13FGjfb2ltaxzR2k5kEgl5imTtnLAEjoPL/AHp+5ljt0L3EiRKOrSMFH8ap2v8AaFYWFyILG2lvgM88yo/dA+QDBTkn/wDM0eHOxKoqA6G73Djplx3KSSmiMZbawVxsIV0+2it4CpaONY2lUYL4/wDJNFva6fb3DXVtpOmxXLsWacWy94x9eYjOapGkdoBvNXtbW600WkNw3IGdmDqfUhgMKPDnI/EPWr2oZyAqsx8gBmmrmYlQy2mJa5wvkd30KTIoHMGQICnNLNM3NNIzn1JqidomuWU9zbcPW+n3eoa1z89m1mQJraTHUZ2II+ZT4SvWrfq1z8Bp9xdSAgwxlsEY8tqo3Y5LYyHUNXmu45Nb1B2ZlJ8cVvnYD05j4j7ctHhAMRfWyEkM4bydx5cVXrCHhsDAO15AKl8ZdnN7pvC1zr2pQ2OlXkeJGtoLxZI5MkZVUxmNhnOAzDqNtq5lXSO2zU9U1DUw3dS/ZKOYopAMoXHzKT5N54O+MVzevauj09TUUYlnt2tANw4E8VwuJRxRTlke7Xmiiiit1Z6KKKKSS7pNIaTlfbNSmfelJpKqgK0Soyv1pSWSpTPnzpSV/ejCAqEz5BHrU7vVJ2ujeQTTwXLKFd0fbAAG3p0H08qVlelJXqCejiqRaUXCOKZ8Ruw2Wz0QhkvARkqIpQTuciVQf4OasPaLd6npuvEaXqd33uq2UMTWyTN4XYgHlGfCSEU5GD4z61oeEYJLmW5RNzK1vbr7s8yn/wCKMfyrsT8KaNJxBDr0sM0l9AQyFpyYwwGAeX22x9BXAdJaqCiqxfLIiwHJqvHD6jEaQMi12gb3tYZ371R+1JJtL0DSNCl+IvVS3YSyNmTmk2BkO+TgsxAHqOlVK81fUbSws72VAzDNvJG0r8jYjXm5eVhy5yVIG3mMZNX3ttsbJ9Jsr65KmWOUwwqyggswJHzEDGVGc7Y98Vy+dGu9Fjj+LjVkkRuW8uUjbBgXcc5BIyD0880+DSfEYTttHaufG/4Wl0loiKEMibfZAtqTkbZffJW/QdCuOIuIVhZYYNNs5GuB87tySIvKuWY5bqMk48AON6s/aZLLBbaJoGnSraR3M4Ejd93axxAd2oZiRgZYn/srnkGr32na6WsNWltYpJOSWWKVO5ZVjjA8R2I5uuMndutdf4o0rha5SHWeImt0S0CEXEt0Yohg5XO4UjJP1zWfjRkgxCJ8xuy3ZaBnfK+XO6tVVHLNg7YKezSbX3DiVQdD1e4l7I9ctriaSS5015FJdizcrKWG59GVxXOdX1C60fiy4awlaFrbu4VKHHyRqv8Awa7rxJwzpb8N8RXmjQD4nVbWSWR45i6SkhnBUZwMkkjHrXAOMwDxLdzLulwI7iM+qyRqw/3rY6KfC1ckwAuHXuCP/P7WJURVVFSxRyHtN0IO65t5WReayZrW8QfEPNe8vfmVwUAV+fwgDc58z0GR51p6KK72np46duzGLBZUkrpDdyKKKKnUaKKKKSS7FNJ13pSWSpSuPfNKSvvVdTkqEr7H0pWVz61KV6VleiAQqEjelLOxY4AJJOAAMkmpSufpVt4C0i1ur+zH2hFBdXKmRZ32FsoYqRGD885I28kyDucYr1tYyjiMr1LDC6Z+y1Wbsu4faK4WadPBYOzynqGu2XlCD17pCQf7zkeVdHxWG0sobGG2stOka00+GMR/DiPmLYYktzE5DHO5wfWmcPgc3KScnKgAfl7DpXiePTDEZfiWP2t1gDcX47vdl2mHXpx1LmW53FjZcZ7UDrd5dvNq0TWFpCD8NCGR1dBuxL4IDHAA222G+aqVktxqF2Fe7WORLdXzEquSHU9FYZxzbnfGCBjfNdm7QuFJdfW3uLSWOO9tciMSsyocnIyV3yDnH1NVPQ+zOW6mil1UGyt0dlktYpCGdQvKMFTjGDjPUj611OC9IKKnw8CSzS3cL3Ovu6vVNP1zg5ptfuOz9N9/rzK5/A6c0VtdXaR2qyyr3qSISOQZ5t15SMlvIdV3qpXfEGq6xr8djpN1NLYx3DtbxzxgqwICl3QbfKAMDy6YJq19qzaNFxTBwjwsl3e3POY7psifvJW5QsGMAuAAA24xgeamum9lXZNa8MTwapqHdzak6hmjB51t5P3Ff8YX1xnm3JOBXctxajwrDxX1URMsg/iaRc55BxGdr/63XM1fWVU5p4H2YPmIyudfLerd2d6dPo/Bek6ZdwxxS21uEaNQQFGScEb4ODuPLpXGu1bhWXTbqSKGMkWKNJAcftbFmJUj1MLMUb0UoelfQpQlu754o3XxN3h3KhgCAMj3GfI42O9azibR7TW9NEE9wbS4t2MtpeBQTbvjBJB2ZCMhlOxBIrynCMUkw+t+KlItKSTyN9++2ZHmtKrpm1UJiYDdlh39y+RqKsnGek2dlK9xaPBGfiXt5beFy8XOqhi8L+cRBGx8Sk8pz1qt17PTzsqIxIzQripIzG7ZKKKKKnQIooopJLqMz+vWlJnO9SmfalZXqEBTKErGlZWqcj7mlZG60QTKMjbU5pFy0mLFZO7mEgls5M45Zf3c+QYAD6ha1sjbfWlnaoamnbURmN29PHKY3BwX0TwTxhZaroyT31xFaXcLrDOJjygOcgE56ZIPXAB29K38aWdsGvo5phGEB5e9cqI3JwGjYkYySwO23puD88cP63eJfpd2cuNTClJIz8t7HjBUjoXxsQfnH94b9h7OuKE1VI7a1keSAbCJ5vv7LGcr4zmSLYAH516EHY15jVYT/i9vq7gEg62yBvkbZcj6G4G+ao1bmF1iByuQTxG8X8N+Wat1rcW10ryW13BcKJDGWVwfFnofQnO3ruegzVI7aeM5+EeF3bTYHl1S5BWBlTmWBc4MzY9CQAPNiKvkgLBQCquD+0KBmA2yB+Qx+dVfRdDv7rUbjU+IIbdea6aaC1D97ycrERMzeoX8IyAT6jfnqR2GwzR1T27TW5uYTm43yGmns2Wz/wAt7HxONidCBl6++aqfYp2eSaLBDxLr8EY16aDlVOXBgQ+bespGzHy6dcmupXDmHuZkiuncyrHhYuYMvlk/hUZJ5vLBHngxuvijAy2bwxysQC8qlgq75PKPmPQgEgbb1GO3MFqYYHdpOViryfeMznfmb95ifLYeWwwKsTY1LW1RrJ3AvebBuYDRfIcNkbh/aryUfVx9SwENbmTxy9Uq72+mspluo5p7luUfESYmuZcqqKNgvKOY+EDwjcDqTSe1vigww/0b0qWP4y5B7984SFAMsT6DGSfQe5qXGPGi6Za21hZI95r7K4UNyEwFiCc8vhDAAeyDIJ2JPEde1QyGa3iuPiZZzm8ugSe9Oc8iE/gB3z+I79AK3cNwJ1dOx8ovs6n/ALEHXuHmctBdZ7674eJ2zkDoOA/PoktavI7m4SK25/hLde7g5tmYZyzkfvMxLH6geVIUUV6jFG2NgY3QLm3uL3XKKKKKNCiiiikkugSv5+tKSvU5X96WkeowpVCR/Wpvp9x172y/1kX/ANqVdqYbSb1mZR8PhepMy4x5nPoM4PpUUr9n/YDv/tCXtb8ycudMtbGxeea1uNQEXdi5lguVSKJnGVQHDF9iMt8udvrn0HROFdUhmurviO80uNNu4ezE0nNjOQwYKVx6gH2rUT6XqW0TSQsoPIpNwvLgZ/8AbkEfXasMmjarGZYyIkx8/wB+uMb5PXoMHJ8qou2jGdmYB3G4It3HJSNqIAbkXCf4l4SudO086xpl9BrOkBsNeWwKmA+QlQ+KM+5296npmrWghsLia7uLfWHkYfGwnwgAgJ3y9WPnzrg4681J6Pd6/oOsFbC8ihmEbczGVTE8fRg2dmXOQVI/KmtRF4yfaVroXD1nKys6zWs+Tkc2SkZcqD4WxhdiNqqztdMBFOQ7gQWi4PEHdfhcHgpGVMMZ2o3W5H1C6Zw12nNbSR2PFMIRj4Y7yBg8cnuCuzfUb+oFdI03ULHUrcT2F1Fcxn8UbZx9fSvlXTbHWra5a0hktgjrzyJLKrwMMkYYHI5sg++1bvSU1KGYNavLpVwVJ+6ug8ZH0LBl23xzEY3rjsU6HQkl9O8D08NR5rapekLQNmQ3+vv7L6F13X9I0SEyajexwnGQmcufoo3rl/E3aJfa0jw6Qy6XpmG7y8lbDMAMkJ5s2Pwrn3Iqi6ja6geadYob6Un9td3cbczAgeGIHBOSPmLdRWlvYtat2g1q5lDSAjkJkV2j8gCn4RvjGMb4NTYT0Qp2WfK8Odu4X7vz4FDU9IA/sxnL37+6Z17ULFtIhGlNPEZ2dLw3DBp5sEFSWGyxnPyDzBJLbY2mk8BqlrBe8W6zHw/DcANBbmEzXcqno3dgjkU+rkZ9KxaJqF3ZfD3ml8P6DBezbw3TMWaI4JDBJGKxnY4OPpitPeR61q92l1d3Ammu2Z+eW4GSR1LEnY+ma7BjZWN6qEhgF7kkE78gBllbfw0WO6aEnbedo8Ny2HEmk8MaFfd3Dqt5rkbrzx91ELUKMkeNm5jnIOyjHnmsN9oCNZ99BDLp1wI45jbXtzGVeKTIV0k8ODkbowBwcjzrXrpGp3TRN93I8ykrzTqTsOh32JzsPOsyaNrFxbAFou6CCUK9wo5ugAHqwyBg9MgVZbtMa3amBI1N+fDTkoTNDc5WCSudPnt4TLJJaMoIGI7qN239lYmk6f1DSryxhEtwIQpYLhJVZlO+xA6dD+lIVfidtNvcHuUW012bUUUUVIkrjK3WlZG8qlK+/WlpH96BSEqMjZBFWAXIktbYA554gW2xg84Yj9cGqy7VmXU5IhbqIlIh2PiPiH/HQVSraYztAbqL+h+9lWnjLxl7yVluTmKEk7nvPz+8am7wpySBiSfviTjovfDb6g5P51VH4huOecmFCJM8o5z4csGP13Ht5iscvEd0Q4MMeGJPzHO+Obf3wPpWQcKqHX004qmaV5Cd1mYJxLp72xePxYz3mS33nXOB1GDinLidJ0YX1zcZluFVWEpBLHJwdjkEncbDc1WdQ1aS71KG9MCI0TcwXmJ5jzc25/lTlpxNc2xfktozzsSRzkAjBGD69f1xWhJSTFrCBmPypzE+w5Le3ickZlteUyjlGC23eNHzEE/Un9azwd6JIBPHEs/dgP3b5UKLfw48jn1zWo4d1S9v74WoECDJcu7tt1VQMAnbnx9AOmK20FlqwaB+801ywCHxSYUcoVSdumGUbeZ386zJKR8bRG8gEc+X6Vcwlo2SQsYktpElEUsrnLLKHkLBDmPOMjyG/L0yOtavidrx7Kdp42t5VkJnhZfJnyceniwfcEeYNbeePUpkTMli0aZAYmUnlIUkfLsBlcfX61VdU1y4v7M28kSIWZ2dgx3LNzHby3FWaSneZdttjpfO9vfqpImHauFY7OCJLG1C475IgXGd+UFVBx/3NWssyOWxII6S4360tBxLcRSM3w0TqV5QhdsLuCcfUgVmPFl0xYtaRNzqFcFz4sYwT77daf4GpG1kDfnxDvu5LqJM+f7/ACt9HbxxTRIjhJVKljnPLiTkBP6D9KhrHefDILJIwzPIFWV+RccwyCc7dP4Cq9/SW5Mlw7W0bCYEBS7YTLBjj8xn8zQOJboxuslvExaPkzzEbkqSfz5Rt9fWoxhlQHbRseW47/uUPw0l75LLxlLG03du7i6Ers8YkJTHPJk8uMA588mq7Wz1bWZ9Rt1hljVQH7zIYnxEsScHpksf0FaytujjdFCGO1CuRNLWAFFFFFWVIrFI1Lu1Skbel5GAoAiXjtgUydE1llDLpd0QRkHk60g7VhYL+6v6Uzg4/KffikCN62LaFrX9lXf+CsbaDrZ/6Vd/4K1jhenIv6VHlX91f0odmXiPA/lPdnDz/S2f2Brf9lXf+CssHD2psy/FRpp6MwRJLtiis56KMA7n9B1JFaflX91f0rPZ3BtXJWGCVGxzRypzKcdPQ59waZwmtkR4ftOCy+Y8/wBKxdn+kX19qsssdkXt4ByT3LziGKAk+bsQudthufMA1cokhh1MaXNd2cNzCBJIluTcLyjkOQYgw8RHTr4um1c41PXNR1C2htJZUitIM9zawII4Y89SFG2T5k7n1pGO4njlMsc0iSEYLK2Dis+ehmqXFz7DLIZ+f9Jnx051BK6faWovp7qwsL7T5Ban71prpbfBAXbEhBOSmRjI38sb8/u9B1Oy1oaRqMAsbkgvmdsJyYJ5wwyGXAOCuc+WTWuMspZ2Mjkv85J3b61s4uINQXTV0247i9s4yWiiuou8ERPUodivvg4PnRQ0s1Nfq7EHx7+B7su9OxkDdAQsE2j6ijDurSe5jZQyTW8TvHIp6FSB/wCR0OKgNK1Q/wDS7/8A0sn8qxzXlzLIWMzoOgSNiiqPIADYCofEXP8AWZ/81v51fHXWzt5pdjms/wBlap/Zd/8A6WT+VH2Vqn9l3/8ApZP5Vg+IuP6zP/mt/Oj4i5/rM/8Amt/Ol/Ly803Y5rLLp+oQxNLNp95HGoyzvbuqj6kilayNPOylWnmYHqDIxB/jWOpGbVu0hNtyKKKKJMttI1YJHyak7elYXahTqLtWJmr1mrHT2TIryiinSRRRRSSRRRRSSRRRRSSRRRRSSRRRRSSRRRRSSRRRRSSX/9k=" alt="YTA Logo" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
         <div style="font-size:11px;letter-spacing:2px;color:#146B47;font-weight:700;">YOUNG TEACHERS ALLIANCE</div>
@@ -2262,6 +2291,33 @@ $("printBtn").addEventListener("click", async ()=>{
   $("printSheet").innerHTML = await buildPrintSheet(currentRecord);
   printSheetWhenReady();
 });
+
+/* Verification notification message — sent by an admin to the teacher's
+   WhatsApp once their membership is verified. Opens a prefilled wa.me link;
+   the admin still taps Send in WhatsApp themselves (no auto-send). */
+function buildVerifiedNotifyMessage(record){
+  return (
+`YOUNG TEACHERS ALLIANCE (YTA)
+District ${CONFIG.district}
+
+Assalam-o-Alaikum ${record.fullName},
+
+Your YTA membership registration (${record.regNo}) has been VERIFIED ✅.
+
+Taluka: ${record.taluka}
+Verified on: ${record.verifiedDate||""} ${record.verifiedTime||""}
+
+You will shortly be added to the Official ${record.taluka} Taluka WhatsApp group. Congratulations, and thank you for being part of YTA.
+
+— Young Teachers Alliance, District ${CONFIG.district}`
+  );
+}
+function openVerifiedNotifyLink(record){
+  if(!record || !record.whatsappNumber){ showToast("No WhatsApp number on file for this teacher.", true); return; }
+  const digits = String(record.whatsappNumber).replace(/[^\d]/g,"");
+  const text = encodeURIComponent(buildVerifiedNotifyMessage(record));
+  window.open(`https://wa.me/${digits}?text=${text}`, "_blank");
+}
 
 /* ============================================================
    SECTION 7: ADMIN AUTHENTICATION — SUPABASE AUTH
@@ -2399,7 +2455,10 @@ async function loadMembers(){
   try{
     const {data,error}=await supabase.from("memberships").select("*").order("created_at",{ascending:false});
     if(error) throw error;
-    recordsCache=(data||[]).map(mapMember);
+    // Soft-deleted rows (deleted_at set) are excluded here. If the deleted_at
+    // column doesn't exist yet in Supabase, row.deleted_at is simply undefined
+    // and nothing is filtered out — safe either way.
+    recordsCache=(data||[]).filter(row=>!row.deleted_at).map(mapMember);
     setConnectionStatus(true,"Live — synced across all devices");
     renderAdminDashboard();
   }catch(e){
@@ -2573,6 +2632,7 @@ function verifiedCardHtml(r){
     <div class="mc-actions">
       <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
       <button type="button" class="btn btn-ghost btn-sm act-print">🖨 Print</button>
+      <button type="button" class="btn btn-ghost btn-sm act-notify">📲 Notify</button>
       <button type="button" class="btn btn-danger-outline btn-sm act-revert">↩ Revert</button>
       <button type="button" class="icon-btn del act-delete" title="Delete" aria-label="Delete registration"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v13a1 1 0 01-1 1H8a1 1 0 01-1-1V7h10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     </div>
@@ -2586,11 +2646,13 @@ function wireCardActions(){
     const revertBtn = card.querySelector(".act-revert");
     const viewBtn = card.querySelector(".act-view");
     const printBtn = card.querySelector(".act-print");
+    const notifyBtn = card.querySelector(".act-notify");
     const delBtn = card.querySelector(".act-delete");
     if(verifyBtn) verifyBtn.addEventListener("click", ()=> openVerifyModal(rec()));
     if(revertBtn) revertBtn.addEventListener("click", ()=> openRevertModal(rec()));
     if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
     if(printBtn) printBtn.addEventListener("click", async ()=>{ $("printSheet").innerHTML = await buildPrintSheet(rec()); printSheetWhenReady(); });
+    if(notifyBtn) notifyBtn.addEventListener("click", ()=> openVerifiedNotifyLink(rec()));
     if(delBtn) delBtn.addEventListener("click", ()=> openDeleteModal(rec()));
   });
 }
@@ -2719,6 +2781,10 @@ $("confirmVerify").addEventListener("click", async ()=>{
     if(target) await logActivity("VERIFIED", target.regNo, target.fullName);
     showToast("Teacher marked as verified.");
     await loadMembers();
+    if(target && confirm(`Notify ${target.fullName} on WhatsApp now that they're verified?`)){
+      const fresh = recordsCache.find(r=>String(r.id)===String(id)) || target;
+      openVerifiedNotifyLink(fresh);
+    }
   }catch(e){ showToast("Could not update: " + e.message, true); }
   pendingVerifyRegNo = null;
   $("verifyOverlay").classList.add("hidden");
@@ -2765,8 +2831,17 @@ $("confirmDelete").addEventListener("click", async ()=>{
   const id = pendingDeleteRegNo;
   const target = recordsCache.find(r=>r.id===id);
   try{
-    const {error}=await supabase.from("memberships").delete().eq("id",id);
-    if(error) throw error;
+    // Try a soft delete first (recoverable). Falls back to a hard delete
+    // automatically if the deleted_at/deleted_by columns don't exist yet —
+    // see setup notes for the optional SQL to enable recovery.
+    const {error: softError} = await supabase.from("memberships").update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: currentAdmin ? currentAdmin.id : null
+    }).eq("id", id);
+    if(softError){
+      const {error: hardError} = await supabase.from("memberships").delete().eq("id", id);
+      if(hardError) throw hardError;
+    }
     if(target) await logActivity("DELETED", target.regNo, target.fullName);
     showToast("Registration " + (target ? target.regNo : "") + " deleted.");
     await loadMembers();
@@ -2774,6 +2849,82 @@ $("confirmDelete").addEventListener("click", async ()=>{
   pendingDeleteRegNo = null;
   $("deleteOverlay").classList.add("hidden");
 });
+
+/* ============================================================
+   SECTION 20b: DELETED RECORDS (TRASH) — VIEW / RESTORE / PURGE
+============================================================ */
+let trashCache = [];
+async function loadTrash(){
+  $("trashList").innerHTML = `<p style="color:#777;font-size:13px;">Loading…</p>`;
+  try{
+    const {data,error} = await supabase.from("memberships").select("*").not("deleted_at","is",null).order("deleted_at",{ascending:false});
+    if(error) throw error;
+    trashCache = data || [];
+    renderTrash();
+  }catch(e){
+    // Most likely cause: the deleted_at column hasn't been added in Supabase yet.
+    trashCache = [];
+    $("trashList").innerHTML = `<p style="color:#a33;font-size:13px;">Could not load deleted records. If you haven't already, run the setup SQL to add the <code>deleted_at</code> / <code>deleted_by</code> columns to the memberships table, then try again.<br><br><span style="color:#999;">(${escapeHtml(e.message||"")})</span></p>`;
+  }
+}
+function renderTrash(){
+  if(!trashCache.length){
+    $("trashList").innerHTML = `<p style="color:#777;font-size:13px;">No deleted records. Anything you delete from the Registrations list will appear here for recovery.</p>`;
+    return;
+  }
+  $("trashList").innerHTML = trashCache.map(row=>{
+    const r = mapMember(row);
+    const deletedAt = row.deleted_at ? new Date(row.deleted_at).toLocaleString() : "—";
+    return `
+    <div class="member-card" data-id="${escapeHtml(r.id)}" style="opacity:0.85;">
+      <div class="mc-top">
+        <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+      </div>
+      <div class="mc-meta">
+        School: ${escapeHtml(r.schoolName)}<br>
+        Taluka: ${escapeHtml(r.taluka)} · WhatsApp: ${escapeHtml(r.whatsappNumber)}<br>
+        Deleted: ${escapeHtml(deletedAt)}
+      </div>
+      <div class="mc-actions">
+        <button type="button" class="btn btn-ghost btn-sm act-restore">↩ Restore</button>
+        <button type="button" class="btn btn-danger btn-sm act-purge">🗑 Delete Permanently</button>
+      </div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("#trashList .member-card").forEach(card=>{
+    const id = card.dataset.id;
+    const row = trashCache.find(x=>String(x.id)===String(id));
+    const restoreBtn = card.querySelector(".act-restore");
+    const purgeBtn = card.querySelector(".act-purge");
+    if(restoreBtn) restoreBtn.addEventListener("click", async ()=>{
+      if(!canPerform("delete")){ showToast("Only an authorized District/Super Admin can restore records.",true); return; }
+      try{
+        const {error} = await supabase.from("memberships").update({deleted_at:null, deleted_by:null}).eq("id", id);
+        if(error) throw error;
+        await logActivity("RESTORED", row.registration_number, row.full_name);
+        showToast((row.registration_number||"Record") + " restored.");
+        await loadTrash();
+        await loadMembers();
+      }catch(e){ showToast("Could not restore: " + e.message, true); }
+    });
+    if(purgeBtn) purgeBtn.addEventListener("click", async ()=>{
+      if(!canPerform("delete")){ showToast("Only an authorized District/Super Admin can permanently delete records.",true); return; }
+      if(!confirm(`Permanently delete ${row.full_name} (${row.registration_number})? This cannot be undone.`)) return;
+      try{
+        const {error} = await supabase.from("memberships").delete().eq("id", id);
+        if(error) throw error;
+        await logActivity("PURGED", row.registration_number, row.full_name);
+        showToast("Permanently deleted.");
+        await loadTrash();
+      }catch(e){ showToast("Could not permanently delete: " + e.message, true); }
+    });
+  });
+}
+$("adminTrashBtn").addEventListener("click", async ()=>{
+  $("trashOverlay").classList.remove("hidden");
+  await loadTrash();
+});
+$("closeTrash").addEventListener("click", ()=> $("trashOverlay").classList.add("hidden"));
 
 let pendingDeleteNominationId = null;
 function openDeleteNominationModal(r){
