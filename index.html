@@ -875,6 +875,7 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
         <button type="button" class="btn btn-ghost btn-sm" id="adminPrintVerifiedBtn">Print Verified List</button>
         <button type="button" class="btn btn-ghost btn-sm" id="adminPrintAllBtn">Print All Records</button>
         <button type="button" class="btn btn-ghost btn-sm" id="adminTrashBtn">🗑 Deleted Records</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="adminDupesBtn">⚠ Duplicate Entries</button>
         <button type="button" class="btn btn-danger-outline btn-sm" id="adminClearAllBtn">Clear All Records</button>
       </div>
     </div>
@@ -1076,6 +1077,18 @@ select{appearance:none; -webkit-appearance:none; background-image:url("data:imag
     <div id="trashList" style="max-height:55vh;overflow-y:auto;"></div>
     <div class="btn-row">
       <button type="button" class="btn btn-ghost" id="closeTrash">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DUPLICATE WHATSAPP-NUMBER ENTRIES — VIEW ONLY, MANUAL DELETE -->
+<div class="modal-overlay hidden no-print" id="dupesOverlay">
+  <div class="modal" style="max-width:680px;">
+    <h3>⚠ Duplicate Entries</h3>
+    <p style="font-size:12.5px;color:#777;margin-top:-6px;">Active registrations that share the same WhatsApp number — e.g. a teacher who re-registered after a mistake. Nothing is blocked automatically; review and delete the incorrect one(s) yourself.</p>
+    <div id="dupesList" style="max-height:55vh;overflow-y:auto;"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-ghost" id="closeDupes">Close</button>
     </div>
   </div>
 </div>
@@ -1436,15 +1449,11 @@ $("confirmToStep4").addEventListener("click", async ()=>{
       // IMPORTANT: do NOT use .select() here. Teachers are anonymous and
       // the memberships SELECT policy intentionally blocks them from reading
       // membership rows. INSERT must succeed before any success UI appears.
+      // Re-registration with the same WhatsApp number is intentionally
+      // allowed (e.g. a teacher fixing a mistaken first submission) — admins
+      // can see and manage duplicates from the "Duplicate Entries" panel.
       const {error} = await supabase.from("memberships").insert(payload);
-      if(error){
-        // 23505 = Postgres unique_violation. Requires a UNIQUE constraint on
-        // whatsapp_number in Supabase (see setup notes) for this to trigger.
-        if(error.code === "23505" || /duplicate key|unique/i.test(error.message||"")){
-          throw new Error("This WhatsApp number is already registered for YTA membership. Each teacher can register only once.");
-        }
-        throw error;
-      }
+      if(error) throw error;
 
       currentRecord = {
         id: null,
@@ -2891,6 +2900,67 @@ $("adminTrashBtn").addEventListener("click", async ()=>{
   await loadTrash();
 });
 $("closeTrash").addEventListener("click", ()=> $("trashOverlay").classList.add("hidden"));
+
+/* ============================================================
+   SECTION 20c: DUPLICATE WHATSAPP-NUMBER ENTRIES — VIEW ONLY
+   Re-registration is intentionally allowed (not blocked at the DB level),
+   so this panel just surfaces active records that share a WhatsApp number,
+   letting an admin manually delete whichever copy was the mistake.
+============================================================ */
+function renderDupes(){
+  const groups = {};
+  recordsCache.forEach(r=>{
+    const key = (r.whatsappNumber||"").trim();
+    if(!key) return;
+    (groups[key] = groups[key] || []).push(r);
+  });
+  const dupeGroups = Object.entries(groups).filter(([,list])=>list.length>1);
+
+  if(!dupeGroups.length){
+    $("dupesList").innerHTML = `<p style="color:#777;font-size:13px;">No duplicate WhatsApp numbers among active registrations right now.</p>`;
+    return;
+  }
+
+  $("dupesList").innerHTML = dupeGroups.map(([number,list])=>{
+    const rows = list.map(r=>`
+      <div class="member-card" data-id="${escapeHtml(r.id)}">
+        <div class="mc-top">
+          <div><div class="mc-regno">${escapeHtml(r.regNo)}</div><div class="mc-name">${escapeHtml(r.fullName)}</div></div>
+          <span class="status-pill ${r.verificationStatus==="Verified"?"verified":"pending"}"><span></span>${escapeHtml(r.verificationStatus)}</span>
+        </div>
+        <div class="mc-meta">
+          School: ${escapeHtml(r.schoolName)}<br>
+          Taluka: ${escapeHtml(r.taluka)} · Submitted: ${escapeHtml(r.dateTime ? new Date(r.dateTime).toLocaleString() : "—")}
+        </div>
+        <div class="mc-actions">
+          <button type="button" class="btn btn-ghost btn-sm act-view">👁 View</button>
+          <button type="button" class="btn btn-danger btn-sm act-delete-dupe">🗑 Delete</button>
+        </div>
+      </div>`).join("");
+    return `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12.5px;font-weight:700;color:#a33;margin-bottom:6px;">📱 ${escapeHtml(number)} — ${list.length} registrations</div>
+        ${rows}
+      </div>`;
+  }).join("");
+
+  document.querySelectorAll("#dupesList .member-card").forEach(card=>{
+    const id = card.dataset.id;
+    const rec = ()=> recordsCache.find(r=>String(r.id)===String(id));
+    const viewBtn = card.querySelector(".act-view");
+    const delBtn = card.querySelector(".act-delete-dupe");
+    if(viewBtn) viewBtn.addEventListener("click", ()=> openViewRecord(rec()));
+    if(delBtn) delBtn.addEventListener("click", ()=>{
+      $("dupesOverlay").classList.add("hidden");
+      openDeleteModal(rec());
+    });
+  });
+}
+$("adminDupesBtn").addEventListener("click", ()=>{
+  renderDupes();
+  $("dupesOverlay").classList.remove("hidden");
+});
+$("closeDupes").addEventListener("click", ()=> $("dupesOverlay").classList.add("hidden"));
 
 let pendingDeleteNominationId = null;
 function openDeleteNominationModal(r){
