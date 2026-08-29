@@ -2252,7 +2252,7 @@ async function buildNominationPrintSheet(nom){
     <div style="font-family:Georgia,serif; max-width:700px; margin:0 auto; color:#12222B; position:relative;">
       ${PRINT_WATERMARK_HTML}
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
-        <img src="data:image/jpeg;base64,${LOGO_JPEG_B64}" alt="YTA Logo" style="width:130px;height:130px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
+        <img src="${LOGO_JPEG_B64}" alt="YTA Logo" style="width:130px;height:130px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
         <div style="font-size:22px;letter-spacing:2px;color:#146B47;font-weight:800;">YOUNG TEACHERS ALLIANCE</div>
         <div style="font-size:17px;color:#444;margin-top:2px;">District ${CONFIG.district}</div>
         <h2 style="margin:8px 0 0;">Taluka-Level Nomination Form</h2>
@@ -2303,7 +2303,7 @@ async function buildPrintSheet(record){
     <div style="position:relative;max-width:640px;margin:40px auto;font-family:Georgia,serif;color:#12222B;padding:0 24px;">
       ${PRINT_WATERMARK_HTML}
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:14px;margin-bottom:20px;">
-        <img src="data:image/jpeg;base64,${LOGO_JPEG_B64}" alt="YTA Logo" style="width:130px;height:130px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
+        <img src="${LOGO_JPEG_B64}" alt="YTA Logo" style="width:130px;height:130px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
         <div style="font-size:22px;letter-spacing:2px;color:#146B47;font-weight:800;">YOUNG TEACHERS ALLIANCE</div>
         <div style="font-size:17px;color:#444;margin-top:2px;">District ${CONFIG.district}</div>
         <h2 style="margin:8px 0 0;">Taluka Election Membership Registration</h2>
@@ -3174,7 +3174,7 @@ function printListSheet(title, records, includeVerifiedDate){
     <div style="max-width:960px;margin:30px auto;font-family:Georgia,serif;color:#12222B;padding:0 20px;position:relative;">
       ${PRINT_WATERMARK_HTML}
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:12px;margin-bottom:16px;">
-        <img src="data:image/jpeg;base64,${LOGO_JPEG_B64}" alt="YTA Logo" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
+        <img src="${LOGO_JPEG_B64}" alt="YTA Logo" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
         <div style="font-size:21px;letter-spacing:2px;color:#146B47;font-weight:800;">YOUNG TEACHERS ALLIANCE</div>
         <div style="font-size:16px;color:#444;margin-top:2px;">District ${CONFIG.district}</div>
         <h2 style="margin:6px 0 0;">${title}</h2>
@@ -3233,7 +3233,7 @@ function printContactSheet(title, records){
     <div style="max-width:900px;margin:30px auto;font-family:Georgia,serif;color:#12222B;padding:0 20px;position:relative;">
       ${PRINT_WATERMARK_HTML}
       <div style="text-align:center;border-bottom:2px solid #0E3B5C;padding-bottom:12px;margin-bottom:16px;">
-        <img src="data:image/jpeg;base64,${LOGO_JPEG_B64}" alt="YTA Logo" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
+        <img src="${LOGO_JPEG_B64}" alt="YTA Logo" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:8px;">
         <div style="font-size:21px;letter-spacing:2px;color:#146B47;font-weight:800;">YOUNG TEACHERS ALLIANCE</div>
         <div style="font-size:16px;color:#444;margin-top:2px;">District ${CONFIG.district}</div>
         <h2 style="margin:6px 0 0;">${title}</h2>
